@@ -18,11 +18,31 @@ from backend.model_database import get_models_for_task, MODEL_DATABASE
 from backend import exporter
 from backend.model_database import get_model_info
 
-def _adapter_to_snake_case(name):
-    """Converts a CamelCase adapter name to snake_case for the filename."""
-    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name)
-    return name.lower().replace('_adapter', '_adapter')
+ADAPTER_TO_MODULE = {
+    "YOLOAdapter": "yolo_adapter",
+    "SAMAdapter": "sam_adapter",
+    "RetinaNetAdapter": "retinanet_adapter",
+    "FasterRCNNAdapter": "faster_rcnn_adapter",
+    "EfficientDetAdapter": "efficientdet_adapter",
+    "SSDAdapter": "ssd_adapter",
+    "GroundingDINOAdapter": "groundingdino_adapter",
+    "MaskRCNNAdapter": "mask_rcnn_adapter",
+    "DeepLabv3Adapter": "deeplabv3_adapter",
+    "UNetAdapter": "unet_adapter",
+    "SegFormerAdapter": "segformer_adapter",
+    "Detectron2Adapter": "detectron2_adapter",
+    "MMDetectionAdapter": "mmdetection_adapter",
+    "OpenPoseAdapter": "openpose_adapter",
+    "HRNetAdapter": "hrnet_adapter",
+    "MediaPipePoseAdapter": "mediapipe_pose_adapter",
+    "PoseTrackAdapter": "posetrack_adapter",
+    "DeepSORTAdapter": "deepsort_adapter",
+    "ByteTrackAdapter": "bytetrack_adapter",
+    "BoTSORTAdapter": "botsort_adapter",
+    "FairMOTAdapter": "fairmot_adapter",
+    "CenterTrackAdapter": "centertrack_adapter",
+    "TraDeSAdapter": "trades_adapter",
+}
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -61,19 +81,23 @@ class MainWindow(QMainWindow):
                 unique_adapters.add(model["adapter"])
 
         for adapter_name in unique_adapters:
+            if adapter_name not in ADAPTER_TO_MODULE:
+                print(f"Warning: No module mapping found for adapter '{adapter_name}'. Skipping registration.")
+                continue
+
             try:
-                module_name = _adapter_to_snake_case(adapter_name)
+                module_name = ADAPTER_TO_MODULE[adapter_name]
                 module_path = f"backend.{module_name}"
                 module = importlib.import_module(module_path)
                 adapter_class = getattr(module, adapter_name)
                 self.model_manager.register_model(adapter_name, adapter_class)
-                print(f"Successfully registered model adapter: {adapter_name}")
-            except ImportError:
-                print(f"Warning: Could not import module for adapter '{adapter_name}' at '{module_path}.py'. File may be missing or have an incorrect name.")
-            except AttributeError:
-                print(f"Warning: Could not find class '{adapter_name}' in module '{module_path}.py'. Class may be missing or have a different name.")
+                # print(f"Successfully registered model adapter: {adapter_name}")
+            except ImportError as e:
+                print(f"ERROR: Could not import module for adapter '{adapter_name}' at '{module_path}.py'. Details: {e}")
+            except AttributeError as e:
+                print(f"ERROR: Could not find class '{adapter_name}' in module '{module_path}.py'. Details: {e}")
             except Exception as e:
-                print(f"An unexpected error occurred while registering adapter '{adapter_name}': {e}")
+                print(f"ERROR: An unexpected error occurred while registering adapter '{adapter_name}': {e}")
 
     def setup_main_ui(self, parent_widget):
         # --- NEW LAYOUT WITH EXPORT BUTTON ---
