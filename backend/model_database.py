@@ -15,51 +15,50 @@ and a scalable way to add new models.
 #   - 'name': The display name of the model in the UI.
 #   - 'adapter': The class name of the adapter responsible for its inference.
 #   - 'tool': The name of the tool required for the model.
-#   - 'exporter': The name of the exporter function for the model.
 MODEL_DATABASE = {
     "Bounding Box": {
         "description": "General Object Detection",
         "models": [
-            {"name": "YOLOv8", "adapter": "YOLOAdapter", "tool": "bbox", "exporter": "export_to_yolo"},
-            {"name": "RetinaNet", "adapter": "RetinaNetAdapter", "tool": "bbox", "exporter": "export_to_coco"},
-            {"name": "Faster R-CNN", "adapter": "FasterRCNNAdapter", "tool": "bbox", "exporter": "export_to_coco"},
-            {"name": "EfficientDet", "adapter": "EfficientDetAdapter", "tool": "bbox", "exporter": "export_to_coco"},
-            {"name": "SSD", "adapter": "SSDAdapter", "tool": "bbox", "exporter": "export_to_coco"},
-            {"name": "GroundingDINO", "adapter": "GroundingDINOAdapter", "tool": "bbox", "exporter": "export_to_groundingdino"},
-            {"name": "GroundingDINO / OWL-ViT", "adapter": "GroundingDINOAdapter", "tool": "bbox", "exporter": "export_to_coco"},
+            {"name": "YOLOv8", "adapter": "YOLOAdapter", "tool": "bbox"},
+            {"name": "RetinaNet", "adapter": "RetinaNetAdapter", "tool": "bbox"},
+            {"name": "Faster R-CNN", "adapter": "FasterRCNNAdapter", "tool": "bbox"},
+            {"name": "EfficientDet", "adapter": "EfficientDetAdapter", "tool": "bbox"},
+            {"name": "SSD", "adapter": "SSDAdapter", "tool": "bbox"},
+            {"name": "GroundingDINO", "adapter": "GroundingDINOAdapter", "tool": "bbox"},
+            {"name": "GroundingDINO / OWL-ViT", "adapter": "GroundingDINOAdapter", "tool": "bbox"},
         ]
     },
     "Polygons/Mask": {
         "description": "Precise Shape & Differentiation",
         "models": [
-            {"name": "Mask R-CNN", "adapter": "MaskRCNNAdapter", "tool": "polygon", "exporter": "export_to_coco"},
-            {"name": "DeepLabv3+", "adapter": "DeepLabv3Adapter", "tool": "polygon", "exporter": "export_to_mask"},
-            {"name": "U-Net", "adapter": "UNetAdapter", "tool": "polygon", "exporter": "export_to_mask"},
-            {"name": "SegFormer", "adapter": "SegFormerAdapter", "tool": "polygon", "exporter": "export_to_mask"},
-            {"name": "Segment Anything (SAM)", "adapter": "SAMAdapter", "tool": "prompt", "exporter": "export_to_coco"},
-            {"name": "Detectron2", "adapter": "Detectron2Adapter", "tool": "polygon", "exporter": "export_to_coco"},
-            {"name": "MMDetection", "adapter": "MMDetectionAdapter", "tool": "polygon", "exporter": "export_to_coco"},
+            {"name": "Mask R-CNN", "adapter": "MaskRCNNAdapter", "tool": "polygon"},
+            {"name": "DeepLabv3+", "adapter": "DeepLabv3Adapter", "tool": "polygon"},
+            {"name": "U-Net", "adapter": "UNetAdapter", "tool": "polygon"},
+            {"name": "SegFormer", "adapter": "SegFormerAdapter", "tool": "polygon"},
+            {"name": "Segment Anything (SAM)", "adapter": "SAMAdapter", "tool": "prompt"},
+            {"name": "Detectron2", "adapter": "Detectron2Adapter", "tool": "polygon"},
+            {"name": "MMDetection", "adapter": "MMDetectionAdapter", "tool": "polygon"},
         ]
     },
     "Keypoints": {
         "description": "Detect Object Structure & Landmarks",
         "models": [
-            {"name": "OpenPose", "adapter": "OpenPoseAdapter", "tool": "keypoint", "exporter": "export_to_coco"},
-            {"name": "HRNet", "adapter": "HRNetAdapter", "tool": "keypoint", "exporter": "export_to_coco"},
-            {"name": "MediaPipe Pose", "adapter": "MediaPipePoseAdapter", "tool": "keypoint", "exporter": "export_to_coco"},
-            {"name": "PoseTrack", "adapter": "PoseTrackAdapter", "tool": "keypoint", "exporter": "export_to_coco"},
+            {"name": "OpenPose", "adapter": "OpenPoseAdapter", "tool": "keypoint"},
+            {"name": "HRNet", "adapter": "HRNetAdapter", "tool": "keypoint"},
+            {"name": "MediaPipe Pose", "adapter": "MediaPipePoseAdapter", "tool": "keypoint"},
+            {"name": "PoseTrack", "adapter": "PoseTrackAdapter", "tool": "keypoint"},
         ]
     },
     "Object IDs": {
         "description": "Track Objects Consistently Over Time",
         "models": [
-            {"name": "DeepSORT", "adapter": "DeepSORTAdapter", "tool": "bbox", "exporter": "export_to_mot"},
-            {"name": "ByteTrack", "adapter": "ByteTrackAdapter", "tool": "bbox", "exporter": "export_to_mot"},
-            {"name": "BoT-SORT", "adapter": "BoTSORTAdapter", "tool": "bbox", "exporter": "export_to_mot"},
-            {"name": "FairMOT", "adapter": "FairMOTAdapter", "tool": "bbox", "exporter": "export_to_mot"},
-            {"name": "CenterTrack", "adapter": "CenterTrackAdapter", "tool": "bbox", "exporter": "export_to_mot"},
-            {"name": "TraDeS / QDTrack", "adapter": "TraDeSAdapter", "tool": "bbox", "exporter": "export_to_mot"},
-            {"name": "PoseTrack", "adapter": "PoseTrackAdapter", "tool": "bbox", "exporter": "export_to_mot"},
+            {"name": "DeepSORT", "adapter": "DeepSORTAdapter", "tool": "bbox"},
+            {"name": "ByteTrack", "adapter": "ByteTrackAdapter", "tool": "bbox"},
+            {"name": "BoT-SORT", "adapter": "BoTSORTAdapter", "tool": "bbox"},
+            {"name": "FairMOT", "adapter": "FairMOTAdapter", "tool": "bbox"},
+            {"name": "CenterTrack", "adapter": "CenterTrackAdapter", "tool": "bbox"},
+            {"name": "TraDeS / QDTrack", "adapter": "TraDeSAdapter", "tool": "bbox"},
+            {"name": "PoseTrack", "adapter": "PoseTrackAdapter", "tool": "bbox"},
         ]
     }
 }

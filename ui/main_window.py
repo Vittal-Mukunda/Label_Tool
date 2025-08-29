@@ -1,8 +1,6 @@
 import os
 import json
 import shutil
-import re
-import importlib
 from PyQt5.QtWidgets import (QMainWindow, QAction, QFileDialog, QTabWidget, 
                              QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSplitter, QStackedWidget, QMessageBox, QActionGroup, QStyle, QInputDialog)
 from PyQt5.QtCore import Qt
@@ -17,6 +15,8 @@ from backend.project_manager import ProjectManager
 from backend.model_database import get_models_for_task, MODEL_DATABASE
 from backend import exporter
 from backend.model_database import get_model_info
+import importlib
+import re
 
 ADAPTER_TO_MODULE = {
     "YOLOAdapter": "yolo_adapter",
@@ -91,7 +91,6 @@ class MainWindow(QMainWindow):
                 module = importlib.import_module(module_path)
                 adapter_class = getattr(module, adapter_name)
                 self.model_manager.register_model(adapter_name, adapter_class)
-                # print(f"Successfully registered model adapter: {adapter_name}")
             except ImportError as e:
                 print(f"ERROR: Could not import module for adapter '{adapter_name}' at '{module_path}.py'. Details: {e}")
             except AttributeError as e:
