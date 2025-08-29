@@ -1,7 +1,7 @@
 import os
 import json
 import shutil
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QAction, QFileDialog, QTabWidget,
+from PyQt5.QtWidgets import (QMainWindow, QAction, QFileDialog, QTabWidget,
                              QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSplitter, QStackedWidget, QMessageBox, QActionGroup, QStyle, QInputDialog)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
@@ -12,37 +12,12 @@ from .welcome_screen import WelcomeScreen
 from .image_sidebar import ImageSidebar
 from backend.model_manager import ModelManager
 from backend.project_manager import ProjectManager
-from backend.model_database import get_models_for_task, MODEL_DATABASE
+from backend.model_database import get_models_for_task
+from backend.yolo_inference import YOLOAdapter
+from backend.sam_inference import SAMAdapter
 from backend import exporter
 from backend.model_database import get_model_info
-import importlib
-import re
-
-ADAPTER_TO_MODULE = {
-    "YOLOAdapter": "yolo_adapter",
-    "SAMAdapter": "sam_adapter",
-    "RetinaNetAdapter": "retinanet_adapter",
-    "FasterRCNNAdapter": "faster_rcnn_adapter",
-    "EfficientDetAdapter": "efficientdet_adapter",
-    "SSDAdapter": "ssd_adapter",
-    "GroundingDINOAdapter": "groundingdino_adapter",
-    "MaskRCNNAdapter": "mask_rcnn_adapter",
-    "DeepLabv3Adapter": "deeplabv3_adapter",
-    "UNetAdapter": "unet_adapter",
-    "SegFormerAdapter": "segformer_adapter",
-    "Detectron2Adapter": "detectron2_adapter",
-    "MMDetectionAdapter": "mmdetection_adapter",
-    "OpenPoseAdapter": "openpose_adapter",
-    "HRNetAdapter": "hrnet_adapter",
-    "MediaPipePoseAdapter": "mediapipe_pose_adapter",
-    "PoseTrackAdapter": "posetrack_adapter",
-    "DeepSORTAdapter": "deepsort_adapter",
-    "ByteTrackAdapter": "bytetrack_adapter",
-    "BoTSORTAdapter": "botsort_adapter",
-    "FairMOTAdapter": "fairmot_adapter",
-    "CenterTrackAdapter": "centertrack_adapter",
-    "TraDeSAdapter": "trades_adapter",
-}
+from PyQt5.QtWidgets import QApplication
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -50,7 +25,9 @@ class MainWindow(QMainWindow):
         
         self.project_manager = ProjectManager(base_projects_dir="LabelAI_Projects")
         self.model_manager = ModelManager()
-        self._register_all_models()
+        # Register the model adapter classes with the model manager
+        self.model_manager.register_model("YOLOAdapter", YOLOAdapter)
+        self.model_manager.register_model("SAMAdapter", SAMAdapter)
         
         self.current_active_label = None
         self.current_model_info = None
@@ -72,31 +49,6 @@ class MainWindow(QMainWindow):
         
         self.stack.setCurrentWidget(self.welcome_screen)
         self.menuBar().setVisible(False)
-
-    def _register_all_models(self):
-        """Dynamically imports and registers all models from the MODEL_DATABASE."""
-        unique_adapters = set()
-        for task in MODEL_DATABASE.values():
-            for model in task["models"]:
-                unique_adapters.add(model["adapter"])
-
-        for adapter_name in unique_adapters:
-            if adapter_name not in ADAPTER_TO_MODULE:
-                print(f"Warning: No module mapping found for adapter '{adapter_name}'. Skipping registration.")
-                continue
-
-            try:
-                module_name = ADAPTER_TO_MODULE[adapter_name]
-                module_path = f"backend.{module_name}"
-                module = importlib.import_module(module_path)
-                adapter_class = getattr(module, adapter_name)
-                self.model_manager.register_model(adapter_name, adapter_class)
-            except ImportError as e:
-                print(f"ERROR: Could not import module for adapter '{adapter_name}' at '{module_path}.py'. Details: {e}")
-            except AttributeError as e:
-                print(f"ERROR: Could not find class '{adapter_name}' in module '{module_path}.py'. Details: {e}")
-            except Exception as e:
-                print(f"ERROR: An unexpected error occurred while registering adapter '{adapter_name}': {e}")
 
     def setup_main_ui(self, parent_widget):
         # --- NEW LAYOUT WITH EXPORT BUTTON ---
@@ -265,9 +217,19 @@ class MainWindow(QMainWindow):
         """
         Activates the selected model, checking for dependencies, and updating the UI.
         """
-        library_name = model_info.get("library")
+        adapter_name = model_info.get('adapter')
+        if not adapter_name:
+            return
 
-        # Check if the required library is installed
+        # Find the corresponding action in the menu to uncheck it on failure
+        action_to_uncheck = None
+        for action in self.models_menu.actions():
+            if action.text() == model_info['name']:
+                action_to_uncheck = action
+                break
+
+        # --- DEPENDENCY CHECK ---
+        library_name = model_info.get("library")
         if library_name and not self.model_manager.is_library_installed(library_name):
             reply = QMessageBox.question(self, "Dependency Not Found",
                                          f"The required library '{library_name}' for the model '{model_info['name']}' is not installed.\n\n"
@@ -275,32 +237,36 @@ class MainWindow(QMainWindow):
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
 
             if reply == QMessageBox.Yes:
-                # Show a temporary status message
                 self.statusBar().showMessage(f"Installing {library_name}...")
-                QApplication.processEvents() # Update the UI
-
-                # Attempt to install the library
+                QApplication.processEvents()
                 success = self.model_manager.install_library(library_name)
-
-                if success:
-                    self.statusBar().showMessage(f"Successfully installed {library_name}.", 5000)
-                else:
+                if not success:
                     QMessageBox.critical(self, "Installation Failed",
-                                         f"Failed to install the library '{library_name}'.\n\n"
-                                         f"Please try installing it manually via 'pip install {library_name}' and restart the application.")
+                                         f"Failed to install '{library_name}'. Please try installing it manually.")
                     self.statusBar().clearMessage()
-                    return # Abort model activation
+                    if action_to_uncheck: action_to_uncheck.setChecked(False)
+                    return
+                self.statusBar().showMessage(f"Successfully installed {library_name}.", 5000)
             else:
-                # User chose not to install
-                self.statusBar().showMessage(f"Model '{model_info['name']}' cannot be used without the '{library_name}' library.", 5000)
-                return # Abort model activation
+                self.statusBar().showMessage(f"Model '{model_info['name']}' cannot be used without '{library_name}'.", 5000)
+                if action_to_uncheck: action_to_uncheck.setChecked(False)
+                return
+        # --- END DEPENDENCY CHECK ---
 
-        # If we've reached here, the library is installed (or wasn't required)
-        self.current_model_info = model_info
-        if model_info and 'adapter' in model_info:
-            self.model_manager.set_active_model(model_info['adapter'])
+        # Attempt to set the model in the manager
+        success = self.model_manager.set_active_model(adapter_name)
 
-        print(f"Selected model: {self.current_model_info['name']}")
+        if success:
+            # If successful, update the UI
+            self.current_model_info = model_info
+            print(f"Selected model: {self.current_model_info['name']}")
+        else:
+            # If the model is not implemented, show a message and uncheck the menu item
+            QMessageBox.warning(self, "Model Not Implemented",
+                                f"The model '{model_info['name']}' is not yet implemented in this version of LabelAI.")
+            if action_to_uncheck: action_to_uncheck.setChecked(False)
+            self.current_model_info = None # Clear any previously active model info
+            return
 
         # Update export button
         self.export_button.setText(f"Export for {self.current_model_info['name']}")

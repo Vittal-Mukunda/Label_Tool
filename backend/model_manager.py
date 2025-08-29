@@ -16,8 +16,10 @@ class ModelManager:
             # Instantiate the class when it's set as active
             self.active_model = self.models[name]()
             print(f"Active model set to {name}")
+            return True
         else:
-            raise ValueError(f"Model {name} not found!")
+            # Return False if the model is not registered, instead of crashing
+            return False
 
     def is_library_installed(self, library_name):
         """Checks if a given library is installed."""
@@ -52,3 +54,8 @@ class ModelManager:
             raise RuntimeError("No model selected!")
         # Pass all arguments to the adapter's infer method
         return self.active_model.infer(*args, **kwargs)
+
+# --- MODIFICATION START ---
+# The dummy adapters have been removed from this file.
+# They now live in their own respective files.
+# --- MODIFICATION END ---
