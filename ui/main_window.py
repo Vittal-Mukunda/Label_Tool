@@ -1,7 +1,7 @@
 import os
 import json
 import shutil
-from PyQt5.QtWidgets import (QMainWindow, QAction, QFileDialog, QTabWidget, 
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QAction, QFileDialog, QTabWidget,
                              QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSplitter, QStackedWidget, QMessageBox, QActionGroup, QStyle, QInputDialog)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
@@ -263,14 +263,43 @@ class MainWindow(QMainWindow):
 
     def activate_model(self, model_info):
         """
-        Activates the selected model, updates the UI, and populates the Tools menu.
+        Activates the selected model, checking for dependencies, and updating the UI.
         """
+        library_name = model_info.get("library")
+
+        # Check if the required library is installed
+        if library_name and not self.model_manager.is_library_installed(library_name):
+            reply = QMessageBox.question(self, "Dependency Not Found",
+                                         f"The required library '{library_name}' for the model '{model_info['name']}' is not installed.\n\n"
+                                         f"Do you want to install it now? (This may take a few moments)",
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+
+            if reply == QMessageBox.Yes:
+                # Show a temporary status message
+                self.statusBar().showMessage(f"Installing {library_name}...")
+                QApplication.processEvents() # Update the UI
+
+                # Attempt to install the library
+                success = self.model_manager.install_library(library_name)
+
+                if success:
+                    self.statusBar().showMessage(f"Successfully installed {library_name}.", 5000)
+                else:
+                    QMessageBox.critical(self, "Installation Failed",
+                                         f"Failed to install the library '{library_name}'.\n\n"
+                                         f"Please try installing it manually via 'pip install {library_name}' and restart the application.")
+                    self.statusBar().clearMessage()
+                    return # Abort model activation
+            else:
+                # User chose not to install
+                self.statusBar().showMessage(f"Model '{model_info['name']}' cannot be used without the '{library_name}' library.", 5000)
+                return # Abort model activation
+
+        # If we've reached here, the library is installed (or wasn't required)
         self.current_model_info = model_info
-        # --- FIX ---
-        # Set the active model in the model manager
         if model_info and 'adapter' in model_info:
             self.model_manager.set_active_model(model_info['adapter'])
-        # --- END FIX ---
+
         print(f"Selected model: {self.current_model_info['name']}")
 
         # Update export button
