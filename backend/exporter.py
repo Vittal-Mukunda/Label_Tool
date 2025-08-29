@@ -646,25 +646,52 @@ class DeepSORTExporter(Exporter):
         print(f"Export completed successfully to: {self.project_path}")
         return warnings
 
+class PlaceholderExporter(Exporter):
+    """A placeholder for models that do not have a dedicated exporter yet."""
+
+    def export(self):
+        print(f"Exporting for model: {self.model_name}")
+        print("Warning: This model does not have a specific export format yet.")
+        print("Annotations will be saved in a generic COCO format as a fallback.")
+
+        # Fallback to COCOExporter logic
+        coco_exporter = COCOExporter(self.annotations_data, self.output_dir, self.class_map, self.project_name, self.model_name)
+        return coco_exporter.export()
+
 # ---------------------------
 # Dispatcher
 # ---------------------------
 
 EXPORTER_MAPPING = {
+    # Implemented Exporters
+    "YOLOv8": YOLOExporter,
+    "SSD": SSDExporter,
+    "GroundingDINO": GroundingDINOStrictExporter,
+    "GroundingDINO / OWL-ViT": GroundingDINOExporter,
+    "DeepSORT": DeepSORTExporter,
+
+    # Models that can use COCO as a default
     "RetinaNet": COCOExporter,
     "Faster R-CNN": COCOExporter,
     "EfficientDet": COCOExporter,
-    "SSD": SSDExporter,
-    "GroundingDINO": GroundingDINOStrictExporter,
-    "OWL-ViT": GroundingDINOExporter,
-    "GroundingDINO / OWL-ViT": GroundingDINOExporter,
     "Mask R-CNN": COCOExporter,
+    "Segment Anything (SAM)": COCOExporter,
     "Detectron2": COCOExporter,
     "MMDetection": COCOExporter,
-    "YOLOv8": YOLOExporter,
-    "Pascal VOC": PascalVOCExporter,
-    "DeepSORT": DeepSORTExporter,
-    "SAM": COCOExporter,
+    "OpenPose": COCOExporter,
+    "HRNet": COCOExporter,
+    "MediaPipe Pose": COCOExporter,
+
+    # Models without a clear format, using a placeholder for now
+    "DeepLabv3+": PlaceholderExporter,
+    "U-Net": PlaceholderExporter,
+    "SegFormer": PlaceholderExporter,
+    "PoseTrack": PlaceholderExporter,
+    "ByteTrack": PlaceholderExporter,
+    "BoT-SORT": PlaceholderExporter,
+    "FairMOT": PlaceholderExporter,
+    "CenterTrack": PlaceholderExporter,
+    "TraDeS / QDTrack": PlaceholderExporter,
 }
 
 def export_annotations(annotations, output_dir, model_name, class_map, project_name=None):
