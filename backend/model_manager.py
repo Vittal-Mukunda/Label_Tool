@@ -1,11 +1,5 @@
 # C:\LabelAI\backend\model_manager.py
 
-# --- MODIFICATION START ---
-# Import the adapters from their dedicated files
-from backend.yolo_inference import YOLOAdapter
-from backend.sam_inference import SAMAdapter
-# --- MODIFICATION END ---
-
 class ModelManager:
     def __init__(self):
         self.models = {}

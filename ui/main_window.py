@@ -1,6 +1,8 @@
 import os
 import json
 import shutil
+import re
+import importlib
 from PyQt5.QtWidgets import (QMainWindow, QAction, QFileDialog, QTabWidget, 
                              QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSplitter, QStackedWidget, QMessageBox, QActionGroup, QStyle, QInputDialog)
 from PyQt5.QtCore import Qt
@@ -12,11 +14,15 @@ from .welcome_screen import WelcomeScreen
 from .image_sidebar import ImageSidebar
 from backend.model_manager import ModelManager
 from backend.project_manager import ProjectManager
-from backend.model_database import get_models_for_task
-from backend.yolo_inference import YOLOAdapter
-from backend.sam_inference import SAMAdapter
+from backend.model_database import get_models_for_task, MODEL_DATABASE
 from backend import exporter
 from backend.model_database import get_model_info
+
+def _adapter_to_snake_case(name):
+    """Converts a CamelCase adapter name to snake_case for the filename."""
+    name = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    name = re.sub('([a-z0-9])([A-Z])', r'\1_\2', name)
+    return name.lower().replace('_adapter', '_adapter')
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -24,9 +30,7 @@ class MainWindow(QMainWindow):
         
         self.project_manager = ProjectManager(base_projects_dir="LabelAI_Projects")
         self.model_manager = ModelManager()
-        # Register the model adapter classes with the model manager
-        self.model_manager.register_model("YOLOAdapter", YOLOAdapter)
-        self.model_manager.register_model("SAMAdapter", SAMAdapter)
+        self._register_all_models()
         
         self.current_active_label = None
         self.current_model_info = None
@@ -48,6 +52,28 @@ class MainWindow(QMainWindow):
         
         self.stack.setCurrentWidget(self.welcome_screen)
         self.menuBar().setVisible(False)
+
+    def _register_all_models(self):
+        """Dynamically imports and registers all models from the MODEL_DATABASE."""
+        unique_adapters = set()
+        for task in MODEL_DATABASE.values():
+            for model in task["models"]:
+                unique_adapters.add(model["adapter"])
+
+        for adapter_name in unique_adapters:
+            try:
+                module_name = _adapter_to_snake_case(adapter_name)
+                module_path = f"backend.{module_name}"
+                module = importlib.import_module(module_path)
+                adapter_class = getattr(module, adapter_name)
+                self.model_manager.register_model(adapter_name, adapter_class)
+                print(f"Successfully registered model adapter: {adapter_name}")
+            except ImportError:
+                print(f"Warning: Could not import module for adapter '{adapter_name}' at '{module_path}.py'. File may be missing or have an incorrect name.")
+            except AttributeError:
+                print(f"Warning: Could not find class '{adapter_name}' in module '{module_path}.py'. Class may be missing or have a different name.")
+            except Exception as e:
+                print(f"An unexpected error occurred while registering adapter '{adapter_name}': {e}")
 
     def setup_main_ui(self, parent_widget):
         # --- NEW LAYOUT WITH EXPORT BUTTON ---
