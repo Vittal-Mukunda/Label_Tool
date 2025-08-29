@@ -1,4 +1,4 @@
-# C:\LabelAI\backend\yolo_inference.py
+# C:\LabelAI\backend\yolo_adapter.py
 
 class YOLOAdapter:
     """Placeholder for the YOLO model inference logic."""

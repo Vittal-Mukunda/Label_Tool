@@ -1,4 +1,4 @@
-# C:\LabelAI\backend\sam_inference.py
+# C:\LabelAI\backend\sam_adapter.py
 
 import os
 import cv2
