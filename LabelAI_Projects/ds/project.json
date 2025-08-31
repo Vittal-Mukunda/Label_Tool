@@ -1,6 +1,10 @@
 {
     "annotation_goal": "Keypoints",
     "model": "OpenPose",
-    "open_files": [],
-    "class_labels": []
+    "open_files": [
+        "C:\\Label_Tool\\LabelAI_Projects\\ds\\images\\WIN_20241126_14_18_59_Pro.jpg"
+    ],
+    "class_labels": [
+        "ds"
+    ]
 }

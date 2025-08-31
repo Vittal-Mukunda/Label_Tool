@@ -281,6 +281,36 @@ class ImageViewer(QLabel):
             return
 
         if event.button() == Qt.LeftButton:
+            # --- KEYPOINT CREATION ---
+            if self.active_tool == "keypoint":
+                if not self.active_label:
+                    QMessageBox.warning(self, "No Label Selected", "Please select a class label before annotating.")
+                    return
+
+                new_point_rel = self.to_relative_coords(event.pos())
+                if not new_point_rel:
+                    return
+
+                # If a keypoint annotation is already selected, add a point to it
+                if self.selected_ann_index != -1 and self.annotations[self.selected_ann_index].get("type") == "keypoint":
+                    ann = self.annotations[self.selected_ann_index]
+                    ann["points"].append([new_point_rel.x(), new_point_rel.y(), 1.0])
+                else:
+                    # Otherwise, create a new keypoint annotation
+                    new_ann = {
+                        "label": self.active_label,
+                        "type": "keypoint",
+                        "points": [[new_point_rel.x(), new_point_rel.y(), 1.0]],
+                        "skeleton": [], # Add a default empty skeleton
+                        "pinned": True
+                    }
+                    self.annotations.append(new_ann)
+                    self.selected_ann_index = len(self.annotations) - 1
+
+                self.annotationsChanged.emit()
+                self.update()
+                return # End here for keypoint tool
+
             # --- MOVING/SELECTING ANNOTATION ---
             if not self.current_polygon_points:
                 clicked_ann_index = self.find_clicked_annotation(event.pos())
@@ -382,7 +412,6 @@ class ImageViewer(QLabel):
             elif event.button() == Qt.RightButton:
                 if self.current_polygon_points:
                     self.current_polygon_points.pop()
-        self.update()
 
     def mouseMoveEvent(self, event):
         self.setCursor(Qt.ArrowCursor) # Reset cursor initially

@@ -1,10 +1,13 @@
 import os
 import json
 import shutil
-from PyQt5.QtWidgets import (QMainWindow, QAction, QFileDialog, QTabWidget,
-                             QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSplitter, QStackedWidget, QMessageBox, QActionGroup, QButtonGroup, QStyle, QInputDialog, QLabel, QSpinBox)
-from PyQt5.QtWidgets import (QMainWindow, QAction, QFileDialog, QTabWidget,
-                             QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSplitter, QStackedWidget, QMessageBox, QActionGroup, QButtonGroup, QStyle, QInputDialog, QLabel, QSpinBox)
+
+from PyQt5.QtWidgets import (
+    QMainWindow, QAction, QFileDialog, QTabWidget, QWidget, QHBoxLayout, 
+    QVBoxLayout, QPushButton, QSplitter, QStackedWidget, QMessageBox, 
+    QActionGroup, QButtonGroup, QStyle, QInputDialog, QLabel, QSpinBox,
+    QApplication
+)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
 
@@ -15,13 +18,11 @@ from .image_sidebar import ImageSidebar
 from .dialogs import HotkeyGuideDialog
 from backend.model_manager import ModelManager
 from backend.project_manager import ProjectManager
-from backend.model_database import get_models_for_task
+from backend.model_database import get_models_for_task, get_model_info
 from backend.yolo_inference import YOLOAdapter
 from backend.sam_inference import SAMAdapter
 from backend import exporter
-from backend.model_database import get_model_info
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtWidgets import QApplication
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -29,75 +30,16 @@ class MainWindow(QMainWindow):
         
         self.project_manager = ProjectManager(base_projects_dir="LabelAI_Projects")
         self.model_manager = ModelManager()
+        
         # Register the model adapter classes with the model manager
-        from backend.model_adapters import (
-            RetinaNetAdapter,
-            FasterRCNNAdapter,
-            EfficientDetAdapter,
-            SSDAdapter,
-            GroundingDINOAdapter,
-            MaskRCNNAdapter,
-            Detectron2Adapter,
-            MMDetectionAdapter,
-            DeepLabv3Adapter,
-            UNetAdapter,
-            SegFormerAdapter,
-        )
-        from backend.model_adapters import (
-            RetinaNetAdapter,
-            FasterRCNNAdapter,
-            EfficientDetAdapter,
-            SSDAdapter,
-            GroundingDINOAdapter,
-            MaskRCNNAdapter,
-            Detectron2Adapter,
-            MMDetectionAdapter,
-            DeepLabv3Adapter,
-            UNetAdapter,
-            SegFormerAdapter,
-        )
-        from backend.keypoint_adapters import (
-            OpenPoseAdapter,
-            HRNetAdapter,
-            MediaPipePoseAdapter,
-            PoseTrackAdapter,
-        )
-        self.model_manager.register_model("YOLOAdapter", YOLOAdapter)
-        self.model_manager.register_model("SAMAdapter", SAMAdapter)
-        self.model_manager.register_model("RetinaNetAdapter", RetinaNetAdapter)
-        self.model_manager.register_model("FasterRCNNAdapter", FasterRCNNAdapter)
-        self.model_manager.register_model("EfficientDetAdapter", EfficientDetAdapter)
-        self.model_manager.register_model("SSDAdapter", SSDAdapter)
-        self.model_manager.register_model("GroundingDINOAdapter", GroundingDINOAdapter)
-        self.model_manager.register_model("MaskRCNNAdapter", MaskRCNNAdapter)
-        self.model_manager.register_model("Detectron2Adapter", Detectron2Adapter)
-        self.model_manager.register_model("MMDetectionAdapter", MMDetectionAdapter)
-        self.model_manager.register_model("DeepLabv3Adapter", DeepLabv3Adapter)
-        self.model_manager.register_model("UNetAdapter", UNetAdapter)
-        self.model_manager.register_model("SegFormerAdapter", SegFormerAdapter)
-        self.model_manager.register_model("OpenPoseAdapter", OpenPoseAdapter)
-        self.model_manager.register_model("HRNetAdapter", HRNetAdapter)
-        self.model_manager.register_model("MediaPipePoseAdapter", MediaPipePoseAdapter)
-        self.model_manager.register_model("PoseTrackAdapter", PoseTrackAdapter)
-        self.model_manager.register_model("RetinaNetAdapter", RetinaNetAdapter)
-        self.model_manager.register_model("FasterRCNNAdapter", FasterRCNNAdapter)
-        self.model_manager.register_model("EfficientDetAdapter", EfficientDetAdapter)
-        self.model_manager.register_model("SSDAdapter", SSDAdapter)
-        self.model_manager.register_model("GroundingDINOAdapter", GroundingDINOAdapter)
-        self.model_manager.register_model("MaskRCNNAdapter", MaskRCNNAdapter)
-        self.model_manager.register_model("Detectron2Adapter", Detectron2Adapter)
-        self.model_manager.register_model("MMDetectionAdapter", MMDetectionAdapter)
-        self.model_manager.register_model("DeepLabv3Adapter", DeepLabv3Adapter)
-        self.model_manager.register_model("UNetAdapter", UNetAdapter)
-        self.model_manager.register_model("SegFormerAdapter", SegFormerAdapter)
+        self._register_model_adapters()
         
         self.current_active_label = None
         self.current_model_info = None
         self.last_selected_tool = "bbox"
-        self.last_selected_tool = "bbox"
         
         self.setWindowTitle("LabelAI")
-        self.resize(1400, 900) # Increased default size for the new layout
+        self.resize(1400, 900)  # Increased default size for the new layout
 
         self.stack = QStackedWidget()
         self.setCentralWidget(self.stack)
@@ -114,41 +56,73 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self.welcome_screen)
         self.menuBar().setVisible(False)
 
+    def _register_model_adapters(self):
+        """Register all model adapters with the model manager."""
+        from backend.model_adapters import (
+            RetinaNetAdapter, FasterRCNNAdapter, EfficientDetAdapter, SSDAdapter,
+            GroundingDINOAdapter, MaskRCNNAdapter, Detectron2Adapter, 
+            MMDetectionAdapter, DeepLabv3Adapter, UNetAdapter, SegFormerAdapter
+        )
+        from backend.keypoint_adapters import (
+            OpenPoseAdapter, HRNetAdapter, MediaPipePoseAdapter, PoseTrackAdapter
+        )
+
+        # Main model adapters
+        self.model_manager.register_model("YOLOAdapter", YOLOAdapter)
+        self.model_manager.register_model("SAMAdapter", SAMAdapter)
+        self.model_manager.register_model("RetinaNetAdapter", RetinaNetAdapter)
+        self.model_manager.register_model("FasterRCNNAdapter", FasterRCNNAdapter)
+        self.model_manager.register_model("EfficientDetAdapter", EfficientDetAdapter)
+        self.model_manager.register_model("SSDAdapter", SSDAdapter)
+        self.model_manager.register_model("GroundingDINOAdapter", GroundingDINOAdapter)
+        self.model_manager.register_model("MaskRCNNAdapter", MaskRCNNAdapter)
+        self.model_manager.register_model("Detectron2Adapter", Detectron2Adapter)
+        self.model_manager.register_model("MMDetectionAdapter", MMDetectionAdapter)
+        self.model_manager.register_model("DeepLabv3Adapter", DeepLabv3Adapter)
+        self.model_manager.register_model("UNetAdapter", UNetAdapter)
+        self.model_manager.register_model("SegFormerAdapter", SegFormerAdapter)
+        
+        # Keypoint adapters
+        self.model_manager.register_model("OpenPoseAdapter", OpenPoseAdapter)
+        self.model_manager.register_model("HRNetAdapter", HRNetAdapter)
+        self.model_manager.register_model("MediaPipePoseAdapter", MediaPipePoseAdapter)
+        self.model_manager.register_model("PoseTrackAdapter", PoseTrackAdapter)
+
     def setup_main_ui(self, parent_widget):
-        # --- NEW LAYOUT WITH EXPORT BUTTON ---
+        """Set up the main UI layout with toolbar, splitters, and export button."""
         # Main vertical layout
         main_layout = QVBoxLayout(parent_widget)
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
         
         # --- TOOLBAR ---
+        self._setup_toolbar(main_layout)
+        
+        # --- MAIN CONTENT AREA ---
+        self._setup_main_content_area(main_layout)
+        
+        # --- EXPORT BUTTON ---
+        self._setup_export_button(main_layout)
+        
+        # --- MENU BAR ---
+        self._setup_menu_bar()
+
+    def _setup_toolbar(self, main_layout):
+        """Set up the annotation tools toolbar."""
         tool_layout = QHBoxLayout()
         
-        self.bbox_tool_button = QPushButton("BBox")
-        self.bbox_tool_button.setCheckable(True)
-        self.bbox_tool_button.setChecked(True)
-        self.bbox_tool_button.setObjectName("toolButton")
-        self.bbox_tool_button.clicked.connect(lambda: self.set_active_tool("bbox"))
-        tool_layout.addWidget(self.bbox_tool_button)
-
-        self.polygon_tool_button = QPushButton("Polygon")
-        self.polygon_tool_button.setCheckable(True)
-        self.polygon_tool_button.setObjectName("toolButton")
-        self.polygon_tool_button.clicked.connect(lambda: self.set_active_tool("polygon"))
-        tool_layout.addWidget(self.polygon_tool_button)
-
-        self.mask_tool_button = QPushButton("Mask")
-        self.mask_tool_button.setCheckable(True)
-        self.mask_tool_button.setObjectName("toolButton")
-        self.mask_tool_button.clicked.connect(lambda: self.set_active_tool("mask"))
-        tool_layout.addWidget(self.mask_tool_button)
-
-        self.keypoint_tool_button = QPushButton("Keypoint")
-        self.keypoint_tool_button.setCheckable(True)
-        self.keypoint_tool_button.setObjectName("toolButton")
-        self.keypoint_tool_button.clicked.connect(lambda: self.set_active_tool("keypoint"))
-        tool_layout.addWidget(self.keypoint_tool_button)
+        # Create tool buttons
+        self.bbox_tool_button = self._create_tool_button("BBox", "bbox", True)
+        self.polygon_tool_button = self._create_tool_button("Polygon", "polygon")
+        self.mask_tool_button = self._create_tool_button("Mask", "mask")
+        self.keypoint_tool_button = self._create_tool_button("Keypoint", "keypoint")
         
+        # Add buttons to layout
+        for button in [self.bbox_tool_button, self.polygon_tool_button, 
+                      self.mask_tool_button, self.keypoint_tool_button]:
+            tool_layout.addWidget(button)
+        
+        # Create button group for exclusive selection
         self.tool_button_group = QButtonGroup(self)
         self.tool_button_group.setExclusive(True)
         self.tool_button_group.addButton(self.bbox_tool_button)
@@ -158,11 +132,20 @@ class MainWindow(QMainWindow):
 
         tool_layout.addStretch()
         main_layout.addLayout(tool_layout)
-        # --- END TOOLBAR ---
 
-        # Top part with the splitter
+    def _create_tool_button(self, text, tool_name, checked=False):
+        """Create a tool button with consistent styling."""
+        button = QPushButton(text)
+        button.setCheckable(True)
+        button.setChecked(checked)
+        button.setObjectName("toolButton")
+        button.clicked.connect(lambda: self.set_active_tool(tool_name))
+        return button
+
+    def _setup_main_content_area(self, main_layout):
+        """Set up the main content area with splitters."""
         main_splitter = QSplitter(Qt.Horizontal)
-        main_layout.addWidget(main_splitter, 1) # Give splitter stretch factor
+        main_layout.addWidget(main_splitter, 1)  # Give splitter stretch factor
 
         # 1. Left Sidebar for Image Previews
         self.image_sidebar = ImageSidebar()
@@ -186,66 +169,93 @@ class MainWindow(QMainWindow):
         
         work_area_splitter.addWidget(self.tabs)
         work_area_splitter.addWidget(self.annotation_panel)
-        work_area_splitter.setStretchFactor(0, 1)
-        work_area_splitter.setStretchFactor(1, 0)
-        work_area_splitter.setSizes([900, 300])
+        work_area_splitter.setStretchFactor(0, 3)
+        work_area_splitter.setStretchFactor(1, 1)
+        work_area_splitter.setSizes([900, 350])
 
         main_splitter.addWidget(self.image_sidebar)
         main_splitter.addWidget(work_area_splitter)
         main_splitter.setSizes([200, 1200])
 
-        # Bottom part with the export button
+    def _setup_export_button(self, main_layout):
+        """Set up the export button at the bottom."""
         export_layout = QHBoxLayout()
-        export_layout.addStretch() # Pushes the button to the right
+        export_layout.addStretch()  # Pushes the button to the right
         
         self.export_button = QPushButton("Export")
         self.export_button.setDisabled(True)
-        self.export_button.setStyleSheet("background-color: #A0A0A0; color: #FFFFFF; padding: 8px 16px; border-radius: 4px;")
+        self.export_button.setStyleSheet(
+            "background-color: #A0A0A0; color: #FFFFFF; "
+            "padding: 8px 16px; border-radius: 4px;"
+        )
         self.export_button.clicked.connect(self.handle_export)
         
         export_layout.addWidget(self.export_button)
         main_layout.addLayout(export_layout)
-        # --- END OF NEW LAYOUT ---
-        
-        menubar = self.menuBar()
-        self.file_menu = menubar.addMenu("File")
-        style = self.style()
 
-        new_project_action = QAction(style.standardIcon(QStyle.SP_FileIcon), "New Project", self)
+    def _setup_menu_bar(self):
+        """Set up the application menu bar."""
+        menubar = self.menuBar()
+        style = self.style()
+        
+        # File menu
+        self.file_menu = menubar.addMenu("File")
+        
+        # New Project
+        new_project_action = QAction(
+            style.standardIcon(QStyle.SP_FileIcon), "New Project", self
+        )
         new_project_action.setShortcut("Ctrl+N")
         new_project_action.triggered.connect(self.new_project)
         self.file_menu.addAction(new_project_action)
 
-        open_project_action = QAction(style.standardIcon(QStyle.SP_DirOpenIcon), "Open Project...", self)
+        # Open Project
+        open_project_action = QAction(
+            style.standardIcon(QStyle.SP_DirOpenIcon), "Open Project...", self
+        )
         open_project_action.setShortcut("Ctrl+O")
         open_project_action.triggered.connect(self.prompt_save_and_return_to_welcome)
         self.file_menu.addAction(open_project_action)
 
         self.file_menu.addSeparator()
         
-        add_images_action = QAction(style.standardIcon(QStyle.SP_DialogOpenButton), "Add Images to Project...", self)
+        # Add Images
+        add_images_action = QAction(
+            style.standardIcon(QStyle.SP_DialogOpenButton), "Add Images to Project...", self
+        )
         add_images_action.triggered.connect(self.add_images_to_project)
         self.file_menu.addAction(add_images_action)
         
-        save_action = QAction(style.standardIcon(QStyle.SP_DialogSaveButton), "Save All Annotations", self)
+        # Save
+        save_action = QAction(
+            style.standardIcon(QStyle.SP_DialogSaveButton), "Save All Annotations", self
+        )
         save_action.setShortcut("Ctrl+S")
         save_action.triggered.connect(self.save_all_annotations)
         self.file_menu.addAction(save_action)
 
-        export_action = QAction(style.standardIcon(QStyle.SP_DialogSaveButton), "Export Annotations...", self)
+        # Export
+        export_action = QAction(
+            style.standardIcon(QStyle.SP_DialogSaveButton), "Export Annotations...", self
+        )
         export_action.setShortcut("Ctrl+Shift+S")
         export_action.triggered.connect(self.handle_export)
         self.file_menu.addAction(export_action)
 
         self.file_menu.addSeparator()
 
-        back_to_projects_action = QAction(style.standardIcon(QStyle.SP_ArrowBack), "Back to Projects", self)
+        # Back to Projects
+        back_to_projects_action = QAction(
+            style.standardIcon(QStyle.SP_ArrowBack), "Back to Projects", self
+        )
         back_to_projects_action.triggered.connect(self.prompt_save_and_return_to_welcome)
         self.file_menu.addAction(back_to_projects_action)
         
+        # Models menu
         self.models_menu = menubar.addMenu("Models")
         self.models_menu.setDisabled(True)
         
+        # Help menu
         help_menu = menubar.addMenu("Help")
         hotkey_action = QAction("Hotkey Guide", self)
         hotkey_action.setShortcut("F1")
@@ -253,10 +263,12 @@ class MainWindow(QMainWindow):
         help_menu.addAction(hotkey_action)
 
     def show_hotkey_guide(self):
+        """Display the hotkey guide dialog."""
         dialog = HotkeyGuideDialog(self)
         dialog.exec_()
 
     def load_project_ui(self, project_name, model_name=None):
+        """Load the project UI and initialize with project data."""
         # Reset UI from any previous project
         self.reset_project_ui()
 
@@ -278,14 +290,14 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentWidget(self.main_widget)
         self.menuBar().setVisible(True)
 
-        # --- DYNAMIC UI SETUP BASED ON GOAL ---
+        # Dynamic UI setup based on goal
         annotation_goal = state.get("annotation_goal")
         if not annotation_goal:
             QMessageBox.critical(self, "Error", "Project is missing its annotation goal definition.")
             self.stack.setCurrentWidget(self.welcome_screen)
             return
 
-        # If model_name wasn't passed (e.g., when opening an existing project), get it from state
+        # If model_name wasn't passed, get it from state
         if not model_name:
             model_name = state.get("model")
 
@@ -300,16 +312,13 @@ class MainWindow(QMainWindow):
         self.load_project_state(state)
 
     def update_menus_for_goal(self, annotation_goal, active_model_name=None):
-        """
-        Dynamically populates the Models menu and activates the specified model.
-        """
+        """Dynamically populate the Models menu and activate the specified model."""
         self.models_menu.clear()
         self.models_menu.setDisabled(False)
 
         models = get_models_for_task(annotation_goal)
         if not models:
             self.models_menu.addAction(QAction("No models available for this goal", self, enabled=False))
-            self.tools_menu.setDisabled(True)
             return
 
         model_group = QActionGroup(self)
@@ -344,9 +353,7 @@ class MainWindow(QMainWindow):
             self.activate_model(active_model_info)
 
     def activate_model(self, model_info):
-        """
-        Activates the selected model, checking for dependencies, and updating the UI.
-        """
+        """Activate the selected model, checking for dependencies, and updating the UI."""
         adapter_name = model_info.get('adapter')
         if not adapter_name:
             return
@@ -358,34 +365,6 @@ class MainWindow(QMainWindow):
                 action_to_uncheck = action
                 break
 
-        # --- DEPENDENCY CHECK ---
-        library_name = model_info.get("library")
-        if library_name and not self.model_manager.is_library_installed(library_name):
-            reply = QMessageBox.question(self, "Dependency Not Found",
-                                         f"The required library '{library_name}' for the model '{model_info['name']}' is not installed.\n\n"
-                                         f"Do you want to install it now? (This may take a few moments)",
-                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
-
-            if reply == QMessageBox.Yes:
-                self.statusBar().showMessage(f"Installing {library_name}...")
-                QApplication.processEvents()
-                
-                success, message = self.model_manager.install_library(library_name)
-                
-                if success:
-                    QMessageBox.information(self, "Installation Succeeded", message)
-                    self.statusBar().showMessage(f"Successfully installed {library_name}.", 5000)
-                else:
-                    QMessageBox.critical(self, "Installation Failed", message)
-                    self.statusBar().clearMessage()
-                    if action_to_uncheck: action_to_uncheck.setChecked(False)
-                    return
-            else:
-                self.statusBar().showMessage(f"Model '{model_info['name']}' cannot be used without '{library_name}'.", 5000)
-                if action_to_uncheck: action_to_uncheck.setChecked(False)
-                return
-        # --- END DEPENDENCY CHECK ---
-
         # Attempt to set the model in the manager
         success = self.model_manager.set_active_model(adapter_name)
 
@@ -395,15 +374,21 @@ class MainWindow(QMainWindow):
             print(f"Selected model: {self.current_model_info['name']}")
         else:
             # If the model is not implemented, show a message and uncheck the menu item
-            QMessageBox.warning(self, "Model Not Implemented",
-                                f"The model '{model_info['name']}' is not yet implemented in this version of LabelAI.")
-            if action_to_uncheck: action_to_uncheck.setChecked(False)
-            self.current_model_info = None # Clear any previously active model info
+            QMessageBox.warning(
+                self, "Model Not Implemented",
+                f"The model '{model_info['name']}' is not yet implemented in this version of LabelAI."
+            )
+            if action_to_uncheck:
+                action_to_uncheck.setChecked(False)
+            self.current_model_info = None
             return
 
         # Update export button
         self.export_button.setText(f"Export for {self.current_model_info['name']}")
-        self.export_button.setStyleSheet("background-color: #D32F2F; color: #FFFFFF; padding: 8px 16px; border-radius: 4px;")
+        self.export_button.setStyleSheet(
+            "background-color: #D32F2F; color: #FFFFFF; "
+            "padding: 8px 16px; border-radius: 4px;"
+        )
         
         # Check if the button should be enabled
         active_viewer = self.tabs.currentWidget()
@@ -413,10 +398,17 @@ class MainWindow(QMainWindow):
             self.export_button.setDisabled(True)
 
         # --- TOOL MANAGEMENT ---
-        # The BBox tool is always available.
+        self._update_tool_visibility()
+
+    def _update_tool_visibility(self):
+        """Update tool button visibility based on the current model."""
+        if not self.current_model_info:
+            return
+            
+        # The BBox tool is always available
         self.bbox_tool_button.setVisible(True)
 
-        # Show other tools based on the model's primary tool.
+        # Show other tools based on the model's primary tool
         model_tool = self.current_model_info.get("tool")
         self.polygon_tool_button.setVisible(model_tool in ["polygon", "mask"])
         self.mask_tool_button.setVisible(model_tool == "mask")
@@ -425,61 +417,55 @@ class MainWindow(QMainWindow):
         # Show/hide keypoint options panel
         self.annotation_panel.set_keypoint_options_visibility(model_tool == "keypoint")
 
-        # For 'prompt' tools like SAM, we don't need a persistent button,
-        # as the interaction is different (click-based, not drawing).
-        # We can just set the tool on the viewer.
+        # For 'prompt' tools like SAM, set the tool directly
         if model_tool == "prompt":
             self.set_active_tool("prompt")
         
         # Ensure the last selected tool is still valid, otherwise default to bbox
-        if self.last_selected_tool == "polygon" and not self.polygon_tool_button.isVisible():
-            self.set_active_tool("bbox")
-            self.bbox_tool_button.setChecked(True)
-        elif self.last_selected_tool == "mask" and not self.mask_tool_button.isVisible():
-            self.set_active_tool("bbox")
-            self.bbox_tool_button.setChecked(True)
-        elif self.last_selected_tool == "keypoint" and not self.keypoint_tool_button.isVisible():
+        self._validate_and_set_tool()
+
+    def _validate_and_set_tool(self):
+        """Validate the last selected tool and set appropriate tool."""
+        if (self.last_selected_tool == "polygon" and not self.polygon_tool_button.isVisible() or
+            self.last_selected_tool == "mask" and not self.mask_tool_button.isVisible() or
+            self.last_selected_tool == "keypoint" and not self.keypoint_tool_button.isVisible()):
             self.set_active_tool("bbox")
             self.bbox_tool_button.setChecked(True)
         else:
             # Re-apply the last used tool
-            if self.last_selected_tool == "bbox":
-                self.bbox_tool_button.setChecked(True)
-            elif self.last_selected_tool == "polygon":
-                self.polygon_tool_button.setChecked(True)
-            elif self.last_selected_tool == "mask":
-                self.mask_tool_button.setChecked(True)
-            elif self.last_selected_tool == "keypoint":
-                self.keypoint_tool_button.setChecked(True)
+            tool_button_map = {
+                "bbox": self.bbox_tool_button,
+                "polygon": self.polygon_tool_button,
+                "mask": self.mask_tool_button,
+                "keypoint": self.keypoint_tool_button
+            }
+            
+            if self.last_selected_tool in tool_button_map:
+                tool_button_map[self.last_selected_tool].setChecked(True)
+            
             self.set_active_tool(self.last_selected_tool)
 
-
     def set_active_tool(self, tool_name):
-        """Sets the active drawing tool in the current image viewer."""
-        self.last_selected_tool = tool_name
+        """Set the active drawing tool in the current image viewer."""
         self.last_selected_tool = tool_name
         active_viewer = self.tabs.currentWidget()
         if isinstance(active_viewer, ImageViewer):
             active_viewer.set_tool(tool_name)
             self.statusBar().showMessage(f"Activated tool: {tool_name}", 3000)
 
-        # This part of the original function is no longer needed as the status bar message is sufficient.
-        # else:
-        #     self.statusBar().showMessage("Please open an image to use a tool.", 3000)
-
-        # This part of the original function is no longer needed as the status bar message is sufficient.
-        # else:
-        #     self.statusBar().showMessage("Please open an image to use a tool.", 3000)
-
     def add_images_to_project(self):
-        """Opens a dialog to select multiple images and copies them to the project."""
-        if not self.project_manager.is_project_active(): return
+        """Open a dialog to select multiple images and copy them to the project."""
+        if not self.project_manager.is_project_active():
+            return
         
         image_dir = self.project_manager.get_image_dir()
         file_filter = "Image Files (*.png *.jpg *.jpeg *.bmp *.gif)"
         
         # Use getOpenFileNames for multi-selection
-        paths, _ = QFileDialog.getOpenFileNames(self, "Add Images", os.path.expanduser("~"), file_filter, options=QFileDialog.DontUseNativeDialog)
+        paths, _ = QFileDialog.getOpenFileNames(
+            self, "Add Images", os.path.expanduser("~"), file_filter,
+            options=QFileDialog.DontUseNativeDialog
+        )
         
         if paths:
             copied_count = 0
@@ -488,18 +474,21 @@ class MainWindow(QMainWindow):
                     shutil.copy(path, image_dir)
                     copied_count += 1
                 except shutil.SameFileError:
-                    pass # File is already in the project
+                    pass  # File is already in the project
                 except Exception as e:
                     print(f"Could not copy file {path}: {e}")
             
             if copied_count > 0:
                 self.image_sidebar.populate_from_directory(image_dir)
             
-            QMessageBox.information(self, "Success", f"Added {copied_count} new image(s) to the project.")
+            QMessageBox.information(
+                self, "Success", f"Added {copied_count} new image(s) to the project."
+            )
 
     def delete_images(self, image_paths):
-        """Deletes image files and their corresponding annotation files."""
-        if not self.project_manager.is_project_active(): return
+        """Delete image files and their corresponding annotation files."""
+        if not self.project_manager.is_project_active():
+            return
 
         deleted_count = 0
         for path in image_paths:
@@ -527,39 +516,41 @@ class MainWindow(QMainWindow):
             self.image_sidebar.populate_from_directory(self.project_manager.get_image_dir())
 
     def open_image_tab(self, path):
-        """Opens an image from a given path (called by the sidebar)."""
-        if path and os.path.exists(path):
-            # Check if this image is already open in a tab
-            for i in range(self.tabs.count()):
-                if self.tabs.widget(i).property("image_path") == path:
-                    self.tabs.setCurrentIndex(i)
-                    return
-
-            viewer = ImageViewer()
-            viewer.load_image(path)
-            viewer.setProperty("image_path", path)
-            viewer.annotationsChanged.connect(lambda v=viewer: self.on_annotations_changed_in_viewer(v))
-            viewer.promptMade.connect(self.handle_sam_prompt)
-            viewer.toolChanged.connect(self.on_tool_changed_from_viewer)
+        """Open an image from a given path (called by the sidebar)."""
+        if not (path and os.path.exists(path)):
+            return
             
-            self.load_annotations_for_viewer(viewer, path)
-            filename = os.path.basename(path)
-            self.tabs.addTab(viewer, filename)
-            self.tabs.setCurrentWidget(viewer)
-            self.on_annotations_changed_in_viewer(viewer)
-            self.set_active_tool(self.last_selected_tool)
-            self.set_active_tool(self.last_selected_tool)
+        # Check if this image is already open in a tab
+        for i in range(self.tabs.count()):
+            if self.tabs.widget(i).property("image_path") == path:
+                self.tabs.setCurrentIndex(i)
+                return
+
+        viewer = ImageViewer()
+        viewer.load_image(path)
+        viewer.setProperty("image_path", path)
+        viewer.annotationsChanged.connect(lambda v=viewer: self.on_annotations_changed_in_viewer(v))
+        viewer.toolChanged.connect(self.on_tool_changed_from_viewer)
+        
+        self.load_annotations_for_viewer(viewer, path)
+        filename = os.path.basename(path)
+        self.tabs.addTab(viewer, filename)
+        self.tabs.setCurrentWidget(viewer)
+        self.on_annotations_changed_in_viewer(viewer)
+        self.set_active_tool(self.last_selected_tool)
 
     def save_all_annotations(self):
-        """Saves annotations for all currently open tabs."""
-        if not self.project_manager.is_project_active(): return
+        """Save annotations for all currently open tabs."""
+        if not self.project_manager.is_project_active():
+            return
+            
         for i in range(self.tabs.count()):
             viewer = self.tabs.widget(i)
             self._save_annotations_for_viewer(viewer)
         QMessageBox.information(self, "Saved", "All open annotations have been saved.")
 
     def closeEvent(self, event):
-        """Saves everything before closing the application."""
+        """Save everything before closing the application."""
         if self.project_manager.is_project_active():
             self.save_all_annotations()
             self.save_project_state()
@@ -568,22 +559,21 @@ class MainWindow(QMainWindow):
         event.accept()
 
     def new_project(self):
-        """Handles the new project action from the file menu."""
+        """Handle the new project action from the file menu."""
         self.prompt_save_and_return_to_welcome(callback=self.welcome_screen.create_new_project)
 
     def prompt_save_and_return_to_welcome(self, callback=None):
-        """
-        Asks the user if they want to save before returning to the welcome screen.
-        An optional callback can be executed after returning.
-        """
+        """Ask the user if they want to save before returning to the welcome screen."""
         if not self.project_manager.is_project_active():
             self.return_to_welcome_screen(callback)
             return
 
-        reply = QMessageBox.question(self, "Save Changes?",
-                                     "Do you want to save your changes before returning to the project list?",
-                                     QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-                                     QMessageBox.Save)
+        reply = QMessageBox.question(
+            self, "Save Changes?",
+            "Do you want to save your changes before returning to the project list?",
+            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+            QMessageBox.Save
+        )
 
         if reply == QMessageBox.Save:
             self.save_all_annotations()
@@ -591,14 +581,10 @@ class MainWindow(QMainWindow):
             self.return_to_welcome_screen(callback)
         elif reply == QMessageBox.Discard:
             self.return_to_welcome_screen(callback)
-        else: # Cancel
-            pass
+        # Cancel - do nothing
 
     def return_to_welcome_screen(self, callback=None):
-        """
-        Resets the UI and switches back to the welcome screen.
-        An optional callback can be executed after returning.
-        """
+        """Reset the UI and switch back to the welcome screen."""
         self.reset_project_ui()
         self.stack.setCurrentWidget(self.welcome_screen)
         self.menuBar().setVisible(False)
@@ -608,7 +594,7 @@ class MainWindow(QMainWindow):
             callback()
 
     def reset_project_ui(self):
-        """Clears all project-specific UI elements."""
+        """Clear all project-specific UI elements."""
         self.tabs.clear()
         self.annotation_panel.clear_all()
         self.image_sidebar.clear_all()
@@ -618,10 +604,13 @@ class MainWindow(QMainWindow):
         self.current_model_info = None
         self.export_button.setText("Export")
         self.export_button.setDisabled(True)
-        self.export_button.setStyleSheet("background-color: #A0A0A0; color: #FFFFFF; padding: 8px 16px; border-radius: 4px;")
+        self.export_button.setStyleSheet(
+            "background-color: #A0A0A0; color: #FFFFFF; "
+            "padding: 8px 16px; border-radius: 4px;"
+        )
 
     def handle_export(self):
-        """Handles the full export workflow."""
+        """Handle the full export workflow."""
         if not self.current_model_info:
             QMessageBox.warning(self, "No Model Selected", "Please select a model from the 'Models' menu first.")
             return
@@ -631,23 +620,16 @@ class MainWindow(QMainWindow):
             return
             
         # 1. Ask for output directory
-        output_dir = QFileDialog.getExistingDirectory(self, "Select Output Directory", os.path.expanduser("~"), QFileDialog.ShowDirsOnly | QFileDialog.DontUseNativeDialog)
+        output_dir = QFileDialog.getExistingDirectory(
+            self, "Select Output Directory", os.path.expanduser("~"),
+            QFileDialog.ShowDirsOnly | QFileDialog.DontUseNativeDialog
+        )
         
         if not output_dir:
-            return # User cancelled
+            return  # User cancelled
 
         # 2. Gather all annotations from the project
-        all_annotations = []
-        annotation_dir = self.project_manager.get_annotation_dir()
-        for filename in os.listdir(annotation_dir):
-            if filename.endswith(".json"):
-                file_path = os.path.join(annotation_dir, filename)
-                try:
-                    with open(file_path, 'r') as f:
-                        data = json.load(f)
-                        all_annotations.append(data)
-                except Exception as e:
-                    print(f"Could not read or parse annotation file {filename}: {e}")
+        all_annotations = self._gather_all_annotations()
         
         if not all_annotations:
             QMessageBox.information(self, "No Annotations", "There are no annotations in this project to export.")
@@ -673,6 +655,23 @@ class MainWindow(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Export Error", f"An error occurred during export: {e}")
 
+    def _gather_all_annotations(self):
+        """Gather all annotation files from the project."""
+        all_annotations = []
+        annotation_dir = self.project_manager.get_annotation_dir()
+        
+        for filename in os.listdir(annotation_dir):
+            if filename.endswith(".json"):
+                file_path = os.path.join(annotation_dir, filename)
+                try:
+                    with open(file_path, 'r') as f:
+                        data = json.load(f)
+                        all_annotations.append(data)
+                except Exception as e:
+                    print(f"Could not read or parse annotation file {filename}: {e}")
+        
+        return all_annotations
+
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts for the main window."""
         key = event.key()
@@ -688,37 +687,41 @@ class MainWindow(QMainWindow):
         else:
             super().keyPressEvent(event)
 
-    # --- Other methods like on_active_label_changed, set_active_tool, etc. remain largely the same ---
-    # Minor changes might be needed to adapt to the new auto-save logic.
     def on_active_label_changed(self, label):
+        """Handle changes to the active annotation label."""
         self.current_active_label = label
-        active_viewer = self.tabs.currentWidget()
-        if isinstance(active_viewer, ImageViewer):
-            active_viewer.set_active_label(label)
         active_viewer = self.tabs.currentWidget()
         if isinstance(active_viewer, ImageViewer):
             active_viewer.set_active_label(label)
 
     def on_tab_changed(self, index):
+        """Handle tab change events."""
         self.on_active_label_changed(self.current_active_label)
         active_viewer = self.tabs.currentWidget()
         if isinstance(active_viewer, ImageViewer):
             self.annotation_panel.update_annotations(active_viewer.annotations)
 
     def on_keypoint_display_options_changed(self, options):
-        """Passes the keypoint display options to the current image viewer."""
+        """Pass the keypoint display options to the current image viewer."""
         active_viewer = self.tabs.currentWidget()
         if isinstance(active_viewer, ImageViewer):
             active_viewer.set_keypoint_display_options(options)
 
     def save_project_state(self):
-        if not self.project_manager.is_project_active(): return
+        """Save the current project state including open files and class labels."""
+        if not self.project_manager.is_project_active():
+            return
+            
         open_files = [self.tabs.widget(i).property("image_path") for i in range(self.tabs.count())]
         class_labels = self.annotation_panel.get_class_labels()
-        state_data = { "open_files": open_files, "class_labels": class_labels }
+        state_data = {
+            "open_files": open_files,
+            "class_labels": class_labels
+        }
         self.project_manager.save_state(state_data)
 
     def on_annotations_changed_in_viewer(self, viewer):
+        """Handle annotation changes in the image viewer."""
         if viewer:
             self.annotation_panel.update_annotations(viewer.annotations)
             self._save_annotations_for_viewer(viewer)
@@ -730,13 +733,16 @@ class MainWindow(QMainWindow):
                 self.export_button.setDisabled(True)
 
     def on_annotations_updated_from_panel(self, annotations):
+        """Handle annotation updates from the annotation panel."""
         viewer = self.tabs.currentWidget()
         if isinstance(viewer, ImageViewer):
             viewer.load_annotations(annotations)
             self._save_annotations_for_viewer(viewer)
 
     def _save_annotations_for_viewer(self, viewer):
-        if not (viewer and self.project_manager.is_project_active()): return
+        """Save annotations for a specific viewer."""
+        if not (viewer and self.project_manager.is_project_active()):
+            return
         
         image_path, image_w, image_h = viewer.get_image_details()
         
@@ -751,25 +757,28 @@ class MainWindow(QMainWindow):
             )
 
     def load_annotations_for_viewer(self, viewer, image_path):
-        if not self.project_manager.is_project_active(): return
+        """Load annotations for a specific viewer."""
+        if not self.project_manager.is_project_active():
+            return
+            
         image_filename = os.path.basename(image_path)
         annotations = self.project_manager.load_annotations(image_filename)
         if annotations:
             viewer.load_annotations(annotations)
 
     def close_tab(self, index):
+        """Close a tab and clean up the widget."""
         widget = self.tabs.widget(index)
         if widget:
             widget.deleteLater()
         self.tabs.removeTab(index)
 
     def run_model(self):
+        """Placeholder for model execution functionality."""
         pass
 
     def on_tool_changed_from_viewer(self, tool_name):
-        """
-        Handles the tool change signal from the image viewer (e.g., via hotkey).
-        """
+        """Handle tool change signal from the image viewer (e.g., via hotkey)."""
         if tool_name == "bbox":
             self.bbox_tool_button.setChecked(True)
         elif tool_name == "polygon":
@@ -778,69 +787,19 @@ class MainWindow(QMainWindow):
         
         self.set_active_tool(tool_name)
 
-    def handle_sam_prompt(self, point):
-        """
-        This function is triggered when the user clicks in "prompt" mode.
-        It runs the SAM model and adds the result to the annotations.
-        """
-        active_viewer = self.tabs.currentWidget()
-        if not isinstance(active_viewer, ImageViewer):
-            return
-
-        # Ensure a model that uses the 'prompt' tool is active
-        if not self.current_model_info or self.current_model_info.get("tool") != "prompt":
-            QMessageBox.warning(self, "Wrong Tool", "Please select a model that uses the 'prompt' tool (like SAM) from the Models menu.")
-            return
-            
-        if not self.current_active_label:
-            QMessageBox.warning(self, "No Label", "Please select a class label first.")
-            return
-
-        image_path = active_viewer.property("image_path")
-        
-        # Convert the widget point to absolute image coordinates for the SAM model
-        prompt_point_absolute = active_viewer.to_absolute_image_coords(point)
-        if not prompt_point_absolute:
-            return # Click was outside the image area
-
-        print(f"Running SAM on {os.path.basename(image_path)} with prompt at absolute coords {prompt_point_absolute}...")
-        
-        self.statusBar().showMessage("Running SAM...", 0)
-        QApplication.processEvents()
-        
-        # Call the model manager with the correct arguments for SAMAdapter
-        try:
-            # The model returns a list of new annotations (usually just one polygon)
-            new_annotations = self.model_manager.run(
-                image_path=image_path, 
-                prompt_point=prompt_point_absolute,
-                active_label=self.current_active_label
-            )
-            
-            if new_annotations:
-                # Add the new AI-generated annotations to the viewer's list
-                active_viewer.annotations.extend(new_annotations)
-                # Emit the signal to update the UI and save the new data
-                active_viewer.annotationsChanged.emit()
-                self.statusBar().showMessage("SAM annotation added successfully!", 3000)
-            else:
-                self.statusBar().showMessage("SAM did not return a valid object for this point.", 4000)
-
-        except Exception as e:
-            print(f"SAM Inference Error: {e}")
-            QMessageBox.critical(self, "SAM Inference Error", f"An error occurred while running the model: {e}")
-        finally:
-            self.statusBar().clearMessage()
-
     def next_image(self):
+        """Navigate to the next image in the sidebar."""
         self.image_sidebar.select_next_image()
 
     def prev_image(self):
+        """Navigate to the previous image in the sidebar."""
         self.image_sidebar.select_prev_image()
 
     def load_project_state(self, state=None):
+        """Load the project state including open files."""
         if state is None:
             state = self.project_manager.load_state()
+            
         open_files = state.get("open_files", [])
         for file_path in open_files:
             if os.path.exists(file_path):

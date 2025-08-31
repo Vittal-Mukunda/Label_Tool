@@ -2,7 +2,7 @@
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QListWidgetItem, QLabel, 
                              QLineEdit, QPushButton, QHBoxLayout, QMessageBox, QToolButton, QStyle,
-                             QGroupBox, QCheckBox, QDoubleSpinBox, QFormLayout)
+                             QGroupBox, QCheckBox, QDoubleSpinBox, QFormLayout, QScrollArea)
 from PyQt5.QtCore import pyqtSignal, QSize, Qt
 from PyQt5.QtGui import QIcon
 
@@ -40,19 +40,15 @@ class AnnotationListItem(QWidget):
         self._is_pinned = is_pinned
         self.pin_button.setChecked(is_pinned)
         style = self.style()
-        icon = style.standardIcon(QStyle.SP_DialogYesButton if is_pinned else QStyle.SP_DialogNoButton)
+        icon = style.standardIcon(QStyle.SP_DialogApplyButton if is_pinned else QStyle.SP_DialogCloseButton)
         self.pin_button.setIcon(icon)
         self.pin_button.setToolTip("Pinned (cannot be moved)" if is_pinned else "Unpinned (can be moved)")
 
 
 class AnnotationPanel(QWidget):
-    # Signal to notify MainWindow when the active label changes
     activeLabelChanged = pyqtSignal(str)
-    # Signal to notify when the list of class labels has been modified
     classLabelsChanged = pyqtSignal()
-    # Signal to send the updated annotation list back to MainWindow
     annotationsUpdated = pyqtSignal(list)
-    # Signal to notify about changes in keypoint display options
     keypointDisplayOptionsChanged = pyqtSignal(dict)
 
     def __init__(self):
@@ -64,9 +60,13 @@ class AnnotationPanel(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(5, 5, 5, 5)
         
-        class_title = QLabel("Class Labels")
+        # --- Class Labels Group Box ---
+        class_group_box = QGroupBox("Class Labels")
+        class_layout = QVBoxLayout(class_group_box)
+        
         self.label_list = QListWidget()
         self.label_list.currentItemChanged.connect(self.on_label_selection_changed)
+        class_layout.addWidget(self.label_list)
         
         add_layout = QHBoxLayout()
         self.new_label_input = QLineEdit()
@@ -77,22 +77,14 @@ class AnnotationPanel(QWidget):
         add_button.clicked.connect(self.add_new_label)
         add_layout.addWidget(self.new_label_input)
         add_layout.addWidget(add_button)
+        class_layout.addLayout(add_layout)
 
         delete_label_button = QPushButton("Delete Selected Label")
         delete_label_button.clicked.connect(self.delete_selected_label)
+        class_layout.addWidget(delete_label_button)
         
-        annotation_title = QLabel("Image Annotations")
-        self.annotation_list = QListWidget()
-        self.annotation_list.setSelectionMode(QListWidget.ExtendedSelection)
-
-        delete_annotation_button = QPushButton("Delete Selected Annotation(s)")
-        delete_annotation_button.clicked.connect(self.delete_selected_annotations)
+        main_layout.addWidget(class_group_box)
         
-        main_layout.addWidget(class_title)
-        main_layout.addWidget(self.label_list)
-        main_layout.addLayout(add_layout)
-        main_layout.addWidget(delete_label_button)
-
         # --- Keypoint Display Options ---
         self.kp_options_group = QGroupBox("Keypoint Options")
         kp_layout = QFormLayout(self.kp_options_group)
@@ -115,12 +107,23 @@ class AnnotationPanel(QWidget):
         kp_layout.addRow("Confidence Threshold:", self.confidence_spinbox)
         
         main_layout.addWidget(self.kp_options_group)
-        # Initially hidden, shown only for keypoint projects
         self.kp_options_group.setVisible(False)
+        
+        # --- Image Annotations Group Box ---
+        annotation_group_box = QGroupBox("Image Annotations")
+        annotation_layout = QVBoxLayout(annotation_group_box)
 
-        main_layout.addWidget(annotation_title)
-        main_layout.addWidget(self.annotation_list)
-        main_layout.addWidget(delete_annotation_button)
+        self.annotation_list = QListWidget()
+        self.annotation_list.setSelectionMode(QListWidget.ExtendedSelection)
+        annotation_layout.addWidget(self.annotation_list)
+
+        delete_annotation_button = QPushButton("Delete Selected Annotation(s)")
+        delete_annotation_button.clicked.connect(self.delete_selected_annotations)
+        annotation_layout.addWidget(delete_annotation_button)
+
+        main_layout.addWidget(annotation_group_box)
+        
+        main_layout.addStretch()
 
     def on_label_selection_changed(self, current, previous):
         if current:
@@ -157,30 +160,23 @@ class AnnotationPanel(QWidget):
         if reply == QMessageBox.Yes:
             self.current_annotations = [ann for ann in self.current_annotations if ann.get("label") != label_to_delete]
             self.annotationsUpdated.emit(self.current_annotations)
-            # --- FIX: Also update the panel's own view ---
             self.update_annotations(self.current_annotations)
 
     def delete_selected_annotations(self):
-        """Deletes the selected items from the image annotation list."""
         selected_list_rows = sorted([self.annotation_list.row(item) for item in self.annotation_list.selectedItems()], reverse=True)
         if not selected_list_rows: return
 
         ann_idx_map = self.annotation_list.property("ann_idx_map") or {}
         
-        # Get the actual annotation indices to delete, avoiding duplicates
         ann_indices_to_delete = sorted(list(set(ann_idx_map[row] for row in selected_list_rows if row in ann_idx_map)), reverse=True)
 
         if not ann_indices_to_delete: return
 
-        # Modify the underlying data model
         for ann_index in ann_indices_to_delete:
             if 0 <= ann_index < len(self.current_annotations):
                 del self.current_annotations[ann_index]
             
-        # Notify the rest of the application (e.g., the ImageViewer) of the change
         self.annotationsUpdated.emit(self.current_annotations)
-        
-        # Resynchronize the visual list with the updated data model
         self.update_annotations(self.current_annotations)
 
     def on_pin_state_changed(self, ann_index, is_pinned):
@@ -189,11 +185,9 @@ class AnnotationPanel(QWidget):
             self.annotationsUpdated.emit(self.current_annotations)
 
     def update_annotations(self, annotations):
-        """Loads and stores the annotations for the current image, then updates the view."""
         self.current_annotations = annotations
         self.annotation_list.clear()
         
-        # Keep track of the real annotation index
         ann_idx_map = {}
         list_idx = 0
 
@@ -202,8 +196,8 @@ class AnnotationPanel(QWidget):
                 label = ann.get("label", "N/A")
                 ann_type = ann.get("type", "N/A").upper()
                 if "pinned" not in ann:
-                    ann["pinned"] = True
-                is_pinned = ann.get("pinned", True)
+                    ann["pinned"] = False
+                is_pinned = ann.get("pinned", False)
 
                 item = QListWidgetItem(self.annotation_list)
                 list_item_widget = AnnotationListItem(f"{i+1}: [{ann_type}] {label}", i, is_pinned)
@@ -218,7 +212,6 @@ class AnnotationPanel(QWidget):
                 if ann.get("type") == "keypoint":
                     points = ann.get("points", [])
                     for j, point in enumerate(points):
-                        # Ensure point has 3 values (x, y, confidence)
                         if len(point) == 3:
                             x, y, conf = point
                             kp_item_text = f"  - KP {j}: ({x:.2f}, {y:.2f}), C: {conf:.2f}"
@@ -227,17 +220,14 @@ class AnnotationPanel(QWidget):
                             kp_item_text = f"  - KP {j}: ({x:.2f}, {y:.2f})"
 
                         kp_item = QListWidgetItem(kp_item_text)
-                        # Make the keypoint sub-items not selectable
                         kp_item.setFlags(kp_item.flags() & ~Qt.ItemIsSelectable)
                         self.annotation_list.addItem(kp_item)
                         list_idx += 1
-
-            else: # Handle cases where annotation is not a dict
+            else:
                 item = QListWidgetItem(f"{i+1}: [Error] Invalid Annotation")
                 self.annotation_list.addItem(item)
                 list_idx += 1
         
-        # Store the map for the delete function
         self.annotation_list.setProperty("ann_idx_map", ann_idx_map)
 
     def get_class_labels(self):
@@ -248,12 +238,10 @@ class AnnotationPanel(QWidget):
         self.label_list.addItems(labels)
 
     def select_label_by_index(self, index):
-        """Selects a class label in the list by its numerical index."""
         if 0 <= index < self.label_list.count():
             self.label_list.setCurrentRow(index)
 
     def on_display_options_changed(self):
-        """Emits a signal with the current keypoint display options."""
         options = {
             "show_keypoints": self.show_keypoints_checkbox.isChecked(),
             "show_skeleton": self.show_skeleton_checkbox.isChecked(),
@@ -262,11 +250,9 @@ class AnnotationPanel(QWidget):
         self.keypointDisplayOptionsChanged.emit(options)
 
     def set_keypoint_options_visibility(self, visible):
-        """Shows or hides the keypoint options group box."""
         self.kp_options_group.setVisible(visible)
 
     def clear_all(self):
-        """Resets the panel to its initial state."""
         self.label_list.clear()
         self.annotation_list.clear()
         self.current_annotations = []

@@ -200,23 +200,32 @@ class ProjectManager:
         abs_annotations = []
         for ann in annotations:
             new_ann = ann.copy()
-            coords = new_ann.pop('coords')
             
-            if new_ann['type'] == 'bbox' and len(coords) == 4:
-                rel_x, rel_y, rel_w, rel_h = coords
-                x_min = int(rel_x * image_width)
-                y_min = int(rel_y * image_height)
-                x_max = int((rel_x + rel_w) * image_width)
-                y_max = int((rel_y + rel_h) * image_height)
-                new_ann['points'] = [x_min, y_min, x_max, y_max]
-            elif new_ann['type'] == 'polygon':
+            if new_ann.get('type') in ['bbox', 'polygon']:
+                coords = new_ann.pop('coords', [])
+                if new_ann['type'] == 'bbox' and len(coords) == 4:
+                    rel_x, rel_y, rel_w, rel_h = coords
+                    x_min = int(rel_x * image_width)
+                    y_min = int(rel_y * image_height)
+                    x_max = int((rel_x + rel_w) * image_width)
+                    y_max = int((rel_y + rel_h) * image_height)
+                    new_ann['points'] = [x_min, y_min, x_max, y_max]
+                elif new_ann['type'] == 'polygon':
+                    abs_points = []
+                    for p in coords:
+                        abs_x = int(p[0] * image_width)
+                        abs_y = int(p[1] * image_height)
+                        abs_points.append([abs_x, abs_y])
+                    new_ann['points'] = abs_points
+            elif new_ann.get('type') == 'keypoint':
+                points = new_ann.get('points', [])
                 abs_points = []
-                for p in coords:
+                for p in points:
                     abs_x = int(p[0] * image_width)
                     abs_y = int(p[1] * image_height)
-                    abs_points.append([abs_x, abs_y])
+                    abs_points.append([abs_x, abs_y, p[2]]) # Keep confidence
                 new_ann['points'] = abs_points
-            
+
             abs_annotations.append(new_ann)
 
         # Create the final JSON structure

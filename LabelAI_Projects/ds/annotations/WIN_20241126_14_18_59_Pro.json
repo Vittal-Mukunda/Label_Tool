@@ -1,0 +1,72 @@
+{
+    "image_path": "C:\\Label_Tool\\LabelAI_Projects\\ds\\images\\WIN_20241126_14_18_59_Pro.jpg",
+    "image_height": 1080,
+    "image_width": 1920,
+    "annotations": [
+        {
+            "label": "ds",
+            "type": "keypoint",
+            "points": [
+                [
+                    912,
+                    456,
+                    1.0
+                ]
+            ],
+            "skeleton": [],
+            "pinned": true
+        },
+        {
+            "label": "ds",
+            "type": "keypoint",
+            "points": [
+                [
+                    1013,
+                    459,
+                    1.0
+                ]
+            ],
+            "skeleton": [],
+            "pinned": true
+        },
+        {
+            "label": "ds",
+            "type": "keypoint",
+            "points": [
+                [
+                    930,
+                    552,
+                    1.0
+                ]
+            ],
+            "skeleton": [],
+            "pinned": true
+        },
+        {
+            "label": "ds",
+            "type": "keypoint",
+            "points": [
+                [
+                    993,
+                    555,
+                    1.0
+                ]
+            ],
+            "skeleton": [],
+            "pinned": true
+        },
+        {
+            "label": "ds",
+            "type": "keypoint",
+            "points": [
+                [
+                    954,
+                    510,
+                    1.0
+                ]
+            ],
+            "skeleton": [],
+            "pinned": true
+        }
+    ]
+}

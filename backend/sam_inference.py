@@ -1,138 +1,14 @@
 # C:\LabelAI\backend\sam_inference.py
 
-import os
-import cv2
-import numpy as np
-import torch
-from segment_anything import sam_model_registry, SamPredictor
-import urllib.request
-import sys
-
-def _show_progress(block_num, block_size, total_size):
-    """callback function for urlretrieve that prints a simple progress bar"""
-    downloaded = block_num * block_size
-    percent = downloaded * 100 / total_size
-    # simple progress bar
-    sys.stdout.write(f"\rDownloading SAM model... {percent:.1f}%")
-    sys.stdout.flush()
-
-def mask_to_polygon(mask):
-    """Converts a binary mask to a polygon."""
-    # Find contours
-    # NOTE: cv2.findContours modifies the source image, so we use a copy
-    mask_copy = mask.astype(np.uint8)
-    contours, _ = cv2.findContours(mask_copy, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    if not contours:
-        return None
-
-    # Find the largest contour by area
-    largest_contour = max(contours, key=cv2.contourArea)
-    
-    # Simplify the contour to reduce the number of points
-    epsilon = 0.005 * cv2.arcLength(largest_contour, True)
-    approx = cv2.approxPolyDP(largest_contour, epsilon, True)
-    
-    # The result from approxPolyDP is a 3D array, so we squeeze it to 2D
-    polygon = approx.squeeze()
-    if polygon.ndim == 1: # If it's a single point
-        return [polygon.tolist()]
-    return polygon.tolist()
-
 class SAMAdapter:
-    """Adapter for the Segment Anything Model (SAM)"""
+    """Placeholder for the Segment Anything Model (SAM)"""
     def __init__(self, model_type="vit_h", device=None):
-        if device is None:
-            device = "cuda" if torch.cuda.is_available() else "cpu"
-        
-        model_checkpoint = "sam_vit_h_4b8939.pth"
-        model_url = f"https://dl.fbaipublicfiles.com/segment_anything/{model_checkpoint}"
-        
-        models_dir = "models"
-        os.makedirs(models_dir, exist_ok=True)
-        
-        model_path = os.path.join(models_dir, model_checkpoint)
-        
-        self.device = device
+        print("SAM model is disabled. Inference will not be performed.")
         self.predictor = None
-
-        if not os.path.exists(model_path):
-            print(f"SAM model checkpoint not found at: {model_path}")
-            print(f"Downloading SAM model... this may take a while.")
-            try:
-                urllib.request.urlretrieve(model_url, model_path, _show_progress)
-                print("\nSAM model downloaded successfully.")
-            except Exception as e:
-                print(f"\nFailed to download SAM model: {e}")
-                return
-
-        try:
-            print("Loading SAM model... This may take a moment.")
-            # Use the correct model type for the checkpoint
-            sam = sam_model_registry[model_type](checkpoint=model_path)
-            sam.to(device=self.device)
-            self.predictor = SamPredictor(sam)
-            print("SAM model loaded successfully.")
-        except Exception as e:
-            print(f"Error loading SAM model: {e}")
 
     def infer(self, image_path, prompt_point, active_label="Object"):
         """
-        Runs SAM inference on an image with a point prompt.
-
-        Args:
-            image_path (str): Path to the image file.
-            prompt_point (tuple): A tuple (x, y) of the user's click coordinate.
-            active_label (str): The active label for the new annotation.
-
-        Returns:
-            list: A list containing a dictionary with the polygon annotation, or an empty list if fails.
+        This is a placeholder for SAM inference. It does not perform any real inference.
         """
-        if not self.predictor:
-            print("Error: SAM model is not loaded. Cannot run inference.")
-            return []
-
-        try:
-            image = cv2.imread(image_path)
-            if image is None:
-                print(f"Error: Could not read image at {image_path}")
-                return []
-            
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            
-            # Set the image for the predictor. This is a computationally expensive step.
-            self.predictor.set_image(image)
-            
-            input_point = np.array([prompt_point])
-            input_label = np.array([1])  # 1 indicates a foreground point
-
-            masks, scores, logits = self.predictor.predict(
-                point_coords=input_point,
-                point_labels=input_label,
-                multimask_output=False,  # We want the single best mask
-            )
-            
-            # The output is a batch, so we take the first mask
-            mask = masks[0]
-            
-            # Convert the boolean mask to a polygon
-            polygon_coords = mask_to_polygon(mask)
-
-            if not polygon_coords or len(polygon_coords) < 3:
-                return []
-
-            # Normalize coordinates to be relative (0.0 to 1.0)
-            h, w, _ = image.shape
-            normalized_coords = [[float(x) / w, float(y) / h] for x, y in polygon_coords]
-
-            # Format the output to match the application's annotation structure
-            annotation = {
-                "type": "polygon",
-                "label": active_label,
-                "coords": normalized_coords,
-            }
-
-            return [annotation]
-        except Exception as e:
-            print(f"An error occurred during SAM inference: {e}")
-            return []
+        print("SAM inference is disabled. Returning empty list.")
+        return []
