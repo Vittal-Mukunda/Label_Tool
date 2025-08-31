@@ -74,36 +74,6 @@ class ModelManager:
         if library_name == "detectron2":
             return self._install_detectron2()
         else:
-            # Return False if the model is not registered, instead of crashing
-            return False
-
-    def is_library_installed(self, library_name):
-        """Checks if a given library is installed."""
-        if library_name is None:
-            return True # No specific library required
-        spec = importlib.util.find_spec(library_name)
-        return spec is not None
-
-    def install_library(self, library_name):
-        """Installs a given library using pip."""
-        if library_name is None:
-            return True # Should not happen if called after a check
-        try:
-            print(f"Attempting to install {library_name}...")
-            # Use sys.executable to ensure pip from the correct environment is used
-            result = subprocess.run(
-                [sys.executable, "-m", "pip", "install", library_name],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            print(f"Successfully installed {library_name}.")
-            print(result.stdout)
-            return True
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to install {library_name}.")
-            print(f"Pip Error: {e.stderr}")
-            return False
             success, message = self._run_command([sys.executable, "-m", "pip", "install", library_name])
             if success:
                 return True, f"Successfully installed {library_name}."

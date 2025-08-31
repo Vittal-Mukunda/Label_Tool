@@ -45,6 +45,18 @@ class ImageViewer(QLabel):
         self.grab_offset = QPoint()
         self.moving_ann_initial_coords = None
 
+        # Keypoint display options
+        self.show_keypoints = True
+        self.show_skeleton = True
+        self.confidence_threshold = 0.5
+
+    def set_keypoint_display_options(self, options):
+        """Sets the display options for keypoints and triggers a repaint."""
+        self.show_keypoints = options.get("show_keypoints", True)
+        self.show_skeleton = options.get("show_skeleton", True)
+        self.confidence_threshold = options.get("confidence_threshold", 0.5)
+        self.update()
+
     def wheelEvent(self, event):
         if not self.pixmap:
             return
@@ -121,21 +133,26 @@ class ImageViewer(QLabel):
             self.update()
         super().keyReleaseEvent(event)
 
-    def find_closest_point(self, pos, max_dist=10):
+    def find_closest_vertex(self, pos, max_dist=10):
         closest_ann_index = -1
         closest_point_index = -1
         min_dist_sq = max_dist ** 2
 
         for i, ann in enumerate(self.annotations):
+            points_to_check = []
             if ann.get("type") == "polygon":
-                for j, p_coords in enumerate(ann["coords"]):
-                    p = QPointF(p_coords[0], p_coords[1])
-                    widget_p = self.to_widget_coords(p)
-                    dist_sq = (pos.x() - widget_p.x())**2 + (pos.y() - widget_p.y())**2
-                    if dist_sq < min_dist_sq:
-                        min_dist_sq = dist_sq
-                        closest_ann_index = i
-                        closest_point_index = j
+                points_to_check = ann.get("coords", [])
+            elif ann.get("type") == "keypoint":
+                points_to_check = ann.get("points", [])
+
+            for j, p_coords in enumerate(points_to_check):
+                p = QPointF(p_coords[0], p_coords[1])
+                widget_p = self.to_widget_coords(p)
+                dist_sq = (pos.x() - widget_p.x())**2 + (pos.y() - widget_p.y())**2
+                if dist_sq < min_dist_sq:
+                    min_dist_sq = dist_sq
+                    closest_ann_index = i
+                    closest_point_index = j
         return closest_ann_index, closest_point_index
 
     def find_closest_segment(self, pos, max_dist=10):
@@ -285,7 +302,7 @@ class ImageViewer(QLabel):
 
             # --- BORDERING LOGIC ---
             if self.active_tool == "polygon" and self.ctrl_pressed:
-                ann_idx, pt_idx = self.find_closest_point(event.pos())
+                ann_idx, pt_idx = self.find_closest_vertex(event.pos())
                 if pt_idx != -1:
                     # Start bordering
                     if self.bordering_ann_index == -1:
@@ -321,7 +338,7 @@ class ImageViewer(QLabel):
                             self.update()
                         return
                 
-                ann_idx, pt_idx = self.find_closest_point(event.pos())
+                ann_idx, pt_idx = self.find_closest_vertex(event.pos())
                 # Delete point with Alt+Click
                 if mods & Qt.AltModifier and pt_idx != -1:
                     if len(self.annotations[ann_idx]["coords"]) > 3:
@@ -331,6 +348,14 @@ class ImageViewer(QLabel):
                     return
 
                 # Select point for dragging
+                if pt_idx != -1:
+                    self.selected_ann_index = ann_idx
+                    self.selected_point_index = pt_idx
+                    return
+
+            # --- KEYPOINT SELECTION ---
+            if self.active_tool == "keypoint":
+                ann_idx, pt_idx = self.find_closest_vertex(event.pos())
                 if pt_idx != -1:
                     self.selected_ann_index = ann_idx
                     self.selected_point_index = pt_idx
@@ -371,7 +396,12 @@ class ImageViewer(QLabel):
         if event.buttons() & Qt.LeftButton and self.selected_point_index != -1:
             new_pos = self.to_relative_coords(event.pos())
             if new_pos:
-                self.annotations[self.selected_ann_index]["coords"][self.selected_point_index] = [new_pos.x(), new_pos.y()]
+                ann = self.annotations[self.selected_ann_index]
+                if ann['type'] == 'polygon':
+                    ann["coords"][self.selected_point_index] = [new_pos.x(), new_pos.y()]
+                elif ann['type'] == 'keypoint':
+                    ann["points"][self.selected_point_index][0] = new_pos.x()
+                    ann["points"][self.selected_point_index][1] = new_pos.y()
                 self.annotationsChanged.emit()
             self.update()
             return
@@ -408,7 +438,7 @@ class ImageViewer(QLabel):
         self.hovered_segment_ann_index, self.hovered_segment_index = -1, -1
         
         if self.ctrl_pressed and self.active_tool == 'polygon':
-            self.hovered_ann_index, self.hovered_point_index = self.find_closest_point(event.pos())
+            self.hovered_ann_index, self.hovered_point_index = self.find_closest_vertex(event.pos())
             if self.bordering_ann_index != -1:
                 self.update_bordering_preview(event.pos())
         elif not self.current_polygon_points:
@@ -417,7 +447,7 @@ class ImageViewer(QLabel):
                 self.hovered_segment_ann_index, self.hovered_segment_index = self.find_closest_segment(event.pos())
             
             if self.hovered_segment_index == -1:
-                self.hovered_ann_index, self.hovered_point_index = self.find_closest_point(event.pos())
+                self.hovered_ann_index, self.hovered_point_index = self.find_closest_vertex(event.pos())
 
         if self.hovered_point_index != -1 or self.hovered_segment_index != -1:
             self.setCursor(Qt.PointingHandCursor)
@@ -429,7 +459,7 @@ class ImageViewer(QLabel):
 
     def update_bordering_preview(self, mouse_pos):
         self.bordering_path_preview = []
-        hover_ann_idx, hover_pt_idx = self.find_closest_point(mouse_pos)
+        hover_ann_idx, hover_pt_idx = self.find_closest_vertex(mouse_pos)
 
         if hover_ann_idx != self.bordering_ann_index or hover_pt_idx == self.bordering_start_pt_index:
             return
@@ -490,6 +520,12 @@ class ImageViewer(QLabel):
                 
                 if QRect(p1, p2).contains(pos):
                     return i
+            elif ann_type == "keypoint":
+                # Consider a click on a keypoint annotation if it's near any of its points
+                for p_coords in ann['points']:
+                    p = self.to_widget_coords(QPointF(p_coords[0], p_coords[1]))
+                    if (p - pos).manhattanLength() < 10: # 10px tolerance
+                        return i
         return -1
 
     def finalize_bbox(self):
@@ -570,6 +606,40 @@ class ImageViewer(QLabel):
                     painter.drawPolygon(QPolygonF(polygon_points))
                     painter.setBrush(Qt.NoBrush)
                     painter.drawText(polygon_points[0].x(), polygon_points[0].y() - 5, label)
+
+            elif ann.get("type") == "keypoint" and coords:
+                points = ann.get("points", [])
+                skeleton = ann.get("skeleton", [])
+                
+                # Draw skeleton
+                if self.show_skeleton:
+                    painter.setPen(QPen(QColor(0, 255, 255, 150), 2))
+                    for connection in skeleton:
+                        p1_idx, p2_idx = connection
+                        if p1_idx < len(points) and p2_idx < len(points):
+                            # Check confidence of both points
+                            if points[p1_idx][2] >= self.confidence_threshold and points[p2_idx][2] >= self.confidence_threshold:
+                                p1_coords = points[p1_idx]
+                                p2_coords = points[p2_idx]
+                                p1 = self.to_widget_coords(QPointF(p1_coords[0], p1_coords[1]))
+                                p2 = self.to_widget_coords(QPointF(p2_coords[0], p2_coords[1]))
+                                painter.drawLine(p1, p2)
+
+                # Draw keypoints
+                if self.show_keypoints:
+                    for j, p_coords in enumerate(points):
+                        if p_coords[2] >= self.confidence_threshold:
+                            p = self.to_widget_coords(QPointF(p_coords[0], p_coords[1]))
+                            is_hovered = self.hovered_ann_index == i and self.hovered_point_index == j
+                            is_selected = self.selected_ann_index == i and self.selected_point_index == j
+
+                            radius = 6 if is_hovered or is_selected else 4
+                            brush_color = QColor(255, 255, 0, 220) if is_selected else QColor(255, 0, 255, 200)
+                            
+                            painter.setBrush(brush_color)
+                            painter.setPen(Qt.NoPen)
+                            painter.drawEllipse(p, radius, radius)
+
 
                 # --- Vertex and Segment Drawing ---
                 if self.ctrl_pressed:

@@ -646,11 +646,270 @@ class DeepSORTExporter(Exporter):
         print(f"Export completed successfully to: {self.project_path}")
         return warnings
 
+class OpenPoseExporter(Exporter):
+    """Exports annotations to OpenPose JSON format."""
+    
+    def export(self):
+        print(f"Exporting to OpenPose format in: {self.project_name}/")
+        
+        warnings = []
+        
+        for item in self.annotations_data:
+            image_path = item.get("image_path")
+            if not image_path:
+                warnings.append("Skipping item with missing 'image_path'.")
+                continue
+
+            image_filename = os.path.basename(image_path)
+            json_filename = f"{os.path.splitext(image_filename)[0]}_keypoints.json"
+            json_filepath = os.path.join(self.labels_dir, json_filename)
+
+            # Copy image to images/ subfolder
+            image_dest_path = os.path.join(self.images_dir, image_filename)
+            if os.path.exists(image_path):
+                try:
+                    shutil.copy(image_path, image_dest_path)
+                except Exception as e:
+                    warnings.append(f"Could not copy image {image_path} to {image_dest_path}: {e}")
+            else:
+                warnings.append(f"Source image not found: {image_path}")
+
+            openpose_data = {
+                "version": 1.1,
+                "people": []
+            }
+
+            for ann in item.get("annotations", []):
+                if ann.get("type") == "keypoint":
+                    points = ann.get("points", [])
+                    # Flatten the points list: [[x,y,c], [x,y,c]] -> [x,y,c,x,y,c]
+                    pose_keypoints_2d = [coord for point in points for coord in point]
+                    
+                    person_data = {
+                        "pose_keypoints_2d": pose_keypoints_2d,
+                        "face_keypoints_2d": [],
+                        "hand_left_keypoints_2d": [],
+                        "hand_right_keypoints_2d": []
+                    }
+                    openpose_data["people"].append(person_data)
+
+            with open(json_filepath, "w") as f:
+                json.dump(openpose_data, f, indent=2)
+
+        print(f"Export completed successfully to: {self.project_path}")
+        return warnings
+
+class HRNetExporter(Exporter):
+    """Exports annotations to HRNet JSON format."""
+    
+    def export(self):
+        print(f"Exporting to HRNet format in: {self.project_name}/")
+        
+        warnings = []
+        
+        for item in self.annotations_data:
+            image_path = item.get("image_path")
+            if not image_path:
+                warnings.append("Skipping item with missing 'image_path'.")
+                continue
+
+            image_filename = os.path.basename(image_path)
+            json_filename = f"{os.path.splitext(image_filename)[0]}_keypoints.json"
+            json_filepath = os.path.join(self.labels_dir, json_filename)
+
+            # Copy image to images/ subfolder
+            image_dest_path = os.path.join(self.images_dir, image_filename)
+            if os.path.exists(image_path):
+                try:
+                    shutil.copy(image_path, image_dest_path)
+                except Exception as e:
+                    warnings.append(f"Could not copy image {image_path} to {image_dest_path}: {e}")
+            else:
+                warnings.append(f"Source image not found: {image_path}")
+
+            hrnet_data = {
+                "people": []
+            }
+
+            for ann in item.get("annotations", []):
+                if ann.get("type") == "keypoint":
+                    points = ann.get("points", [])
+                    keypoints_2d = [coord for point in points for coord in point]
+                    
+                    person_data = {
+                        "keypoints_2d": keypoints_2d
+                    }
+                    hrnet_data["people"].append(person_data)
+
+            with open(json_filepath, "w") as f:
+                json.dump(hrnet_data, f, indent=2)
+
+        print(f"Export completed successfully to: {self.project_path}")
+        return warnings
+
+class MediaPipePoseExporter(Exporter):
+    """Exports annotations to MediaPipe Pose JSON format."""
+    
+    def export(self):
+        print(f"Exporting to MediaPipe Pose format in: {self.project_name}/")
+        
+        warnings = []
+        
+        for item in self.annotations_data:
+            image_path = item.get("image_path")
+            if not image_path:
+                warnings.append("Skipping item with missing 'image_path'.")
+                continue
+
+            image_filename = os.path.basename(image_path)
+            json_filename = f"{os.path.splitext(image_filename)[0]}_keypoints.json"
+            json_filepath = os.path.join(self.labels_dir, json_filename)
+
+            # Copy image to images/ subfolder
+            image_dest_path = os.path.join(self.images_dir, image_filename)
+            if os.path.exists(image_path):
+                try:
+                    shutil.copy(image_path, image_dest_path)
+                except Exception as e:
+                    warnings.append(f"Could not copy image {image_path} to {image_dest_path}: {e}")
+            else:
+                warnings.append(f"Source image not found: {image_path}")
+
+            mediapipe_data = {
+                "pose_landmarks": [],
+                "pose_world_landmarks": []
+            }
+
+            for ann in item.get("annotations", []):
+                if ann.get("type") == "keypoint":
+                    points = ann.get("points", [])
+                    landmarks = []
+                    for point in points:
+                        x, y, confidence = point
+                        landmarks.append({
+                            "x": x,
+                            "y": y,
+                            "z": 0.0,  # Z-coordinate is not available
+                            "visibility": confidence
+                        })
+                    # In a multi-person scenario, mediapipe returns a list of landmarks for each person.
+                    # Here we are adding all landmarks to a single list.
+                    # This might need adjustment based on how multi-person is handled.
+                    mediapipe_data["pose_landmarks"].extend(landmarks)
+
+            with open(json_filepath, "w") as f:
+                json.dump(mediapipe_data, f, indent=2)
+
+        print(f"Export completed successfully to: {self.project_path}")
+        return warnings
+
+class PoseTrackExporter(Exporter):
+    """Exports annotations to PoseTrack JSON format."""
+    
+    def export(self):
+        print(f"Exporting to PoseTrack format in: {self.project_name}/")
+        
+        warnings = []
+        
+        posetrack_data = {
+            "images": [],
+            "annotations": [],
+            "categories": [
+                {
+                    "supercategory": "person",
+                    "id": 1,
+                    "name": "person",
+                    "keypoints": [
+                        "nose", "head_bottom", "head_top", "left_ear", "right_ear",
+                        "left_shoulder", "right_shoulder", "left_elbow", "right_elbow",
+                        "left_wrist", "right_wrist", "left_hip", "right_hip",
+                        "left_knee", "right_knee", "left_ankle", "right_ankle"
+                    ],
+                    "skeleton": [
+                        [16, 14], [14, 12], [17, 15], [15, 13], [12, 13], [6, 8], [7, 9],
+                        [8, 10], [9, 11], [2, 3], [1, 2], [1, 3], [2, 4], [3, 5], [4, 6], [5, 7]
+                    ]
+                }
+            ]
+        }
+
+        ann_id_counter = 1
+        for img_id, item in enumerate(self.annotations_data, start=1):
+            image_path = item.get("image_path")
+            if not image_path:
+                warnings.append("Skipping item with missing 'image_path'.")
+                continue
+
+            image_filename = os.path.basename(image_path)
+            # Copy image to images/ subfolder
+            image_dest_path = os.path.join(self.images_dir, image_filename)
+            if os.path.exists(image_path):
+                try:
+                    shutil.copy(image_path, image_dest_path)
+                except Exception as e:
+                    warnings.append(f"Could not copy image {image_path} to {image_dest_path}: {e}")
+            else:
+                warnings.append(f"Source image not found: {image_path}")
+            
+            posetrack_data["images"].append({
+                "file_name": image_filename,
+                "id": img_id
+            })
+
+            for ann in item.get("annotations", []):
+                if ann.get("type") == "keypoint":
+                    points = ann.get("points", [])
+                    if not points:
+                        continue
+
+                    # Calculate bounding box
+                    visible_points = [p for p in points if p[2] > 0]
+                    if not visible_points:
+                        continue
+                    
+                    xs = [p[0] for p in visible_points]
+                    ys = [p[1] for p in visible_points]
+                    x_min, y_min = min(xs), min(ys)
+                    x_max, y_max = max(xs), max(ys)
+                    bbox = [x_min, y_min, x_max - x_min, y_max - y_min]
+
+                    # Flatten keypoints and set visibility
+                    keypoints = []
+                    num_keypoints = 0
+                    for p in points:
+                        x, y, conf = p
+                        v = 2 if conf > 0 else 0 # 2=visible, 1=occluded, 0=not labeled
+                        if v > 0:
+                            num_keypoints += 1
+                        keypoints.extend([x, y, v])
+
+                    posetrack_data["annotations"].append({
+                        "person_id": ann.get("track_id", ann_id_counter),
+                        "image_id": img_id,
+                        "category_id": 1,
+                        "keypoints": keypoints,
+                        "num_keypoints": num_keypoints,
+                        "bbox": bbox,
+                        "id": ann_id_counter
+                    })
+                    ann_id_counter += 1
+
+        json_filepath = os.path.join(self.labels_dir, "posetrack_annotations.json")
+        with open(json_filepath, "w") as f:
+            json.dump(posetrack_data, f, indent=2)
+
+        print(f"Export completed successfully to: {self.project_path}")
+        return warnings
+
 # ---------------------------
 # Dispatcher
 # ---------------------------
 
 EXPORTER_MAPPING = {
+    "OpenPose": OpenPoseExporter,
+    "HRNet": HRNetExporter,
+    "MediaPipe Pose": MediaPipePoseExporter,
+    "PoseTrack": PoseTrackExporter,
     "RetinaNet": COCOExporter,
     "Faster R-CNN": COCOExporter,
     "EfficientDet": COCOExporter,

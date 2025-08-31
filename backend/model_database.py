@@ -45,10 +45,10 @@ MODEL_DATABASE = {
     "Keypoints": {
         "description": "Detect Object Structure & Landmarks",
         "models": [
-            {"name": "OpenPose", "adapter": "OpenPoseAdapter", "tool": "keypoint", "exporter": "export_to_coco", "library": "torch-openpose"},
-            {"name": "HRNet", "adapter": "HRNetAdapter", "tool": "keypoint", "exporter": "export_to_coco", "library": "mmpose"},
-            {"name": "MediaPipe Pose", "adapter": "MediaPipePoseAdapter", "tool": "keypoint", "exporter": "export_to_coco", "library": "mediapipe"},
-            {"name": "PoseTrack", "adapter": "PoseTrackAdapter", "tool": "keypoint", "exporter": "export_to_coco", "library": None},
+            {"name": "OpenPose", "adapter": "OpenPoseAdapter", "tool": "keypoint", "exporter": "OpenPose", "library": "torch-openpose"},
+            {"name": "HRNet", "adapter": "HRNetAdapter", "tool": "keypoint", "exporter": "HRNet", "library": "mmpose"},
+            {"name": "MediaPipe Pose", "adapter": "MediaPipePoseAdapter", "tool": "keypoint", "exporter": "MediaPipe Pose", "library": "mediapipe"},
+            {"name": "PoseTrack", "adapter": "PoseTrackAdapter", "tool": "keypoint", "exporter": "PoseTrack", "library": None},
         ]
     },
     "Object IDs": {

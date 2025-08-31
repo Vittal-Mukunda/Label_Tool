@@ -56,6 +56,12 @@ class MainWindow(QMainWindow):
             UNetAdapter,
             SegFormerAdapter,
         )
+        from backend.keypoint_adapters import (
+            OpenPoseAdapter,
+            HRNetAdapter,
+            MediaPipePoseAdapter,
+            PoseTrackAdapter,
+        )
         self.model_manager.register_model("YOLOAdapter", YOLOAdapter)
         self.model_manager.register_model("SAMAdapter", SAMAdapter)
         self.model_manager.register_model("RetinaNetAdapter", RetinaNetAdapter)
@@ -69,6 +75,10 @@ class MainWindow(QMainWindow):
         self.model_manager.register_model("DeepLabv3Adapter", DeepLabv3Adapter)
         self.model_manager.register_model("UNetAdapter", UNetAdapter)
         self.model_manager.register_model("SegFormerAdapter", SegFormerAdapter)
+        self.model_manager.register_model("OpenPoseAdapter", OpenPoseAdapter)
+        self.model_manager.register_model("HRNetAdapter", HRNetAdapter)
+        self.model_manager.register_model("MediaPipePoseAdapter", MediaPipePoseAdapter)
+        self.model_manager.register_model("PoseTrackAdapter", PoseTrackAdapter)
         self.model_manager.register_model("RetinaNetAdapter", RetinaNetAdapter)
         self.model_manager.register_model("FasterRCNNAdapter", FasterRCNNAdapter)
         self.model_manager.register_model("EfficientDetAdapter", EfficientDetAdapter)
@@ -132,12 +142,19 @@ class MainWindow(QMainWindow):
         self.mask_tool_button.setObjectName("toolButton")
         self.mask_tool_button.clicked.connect(lambda: self.set_active_tool("mask"))
         tool_layout.addWidget(self.mask_tool_button)
+
+        self.keypoint_tool_button = QPushButton("Keypoint")
+        self.keypoint_tool_button.setCheckable(True)
+        self.keypoint_tool_button.setObjectName("toolButton")
+        self.keypoint_tool_button.clicked.connect(lambda: self.set_active_tool("keypoint"))
+        tool_layout.addWidget(self.keypoint_tool_button)
         
         self.tool_button_group = QButtonGroup(self)
         self.tool_button_group.setExclusive(True)
         self.tool_button_group.addButton(self.bbox_tool_button)
         self.tool_button_group.addButton(self.polygon_tool_button)
         self.tool_button_group.addButton(self.mask_tool_button)
+        self.tool_button_group.addButton(self.keypoint_tool_button)
 
         tool_layout.addStretch()
         main_layout.addLayout(tool_layout)
@@ -165,6 +182,7 @@ class MainWindow(QMainWindow):
         self.annotation_panel.activeLabelChanged.connect(self.on_active_label_changed)
         self.annotation_panel.classLabelsChanged.connect(self.save_project_state)
         self.annotation_panel.annotationsUpdated.connect(self.on_annotations_updated_from_panel)
+        self.annotation_panel.keypointDisplayOptionsChanged.connect(self.on_keypoint_display_options_changed)
         
         work_area_splitter.addWidget(self.tabs)
         work_area_splitter.addWidget(self.annotation_panel)
@@ -402,6 +420,10 @@ class MainWindow(QMainWindow):
         model_tool = self.current_model_info.get("tool")
         self.polygon_tool_button.setVisible(model_tool in ["polygon", "mask"])
         self.mask_tool_button.setVisible(model_tool == "mask")
+        self.keypoint_tool_button.setVisible(model_tool == "keypoint")
+
+        # Show/hide keypoint options panel
+        self.annotation_panel.set_keypoint_options_visibility(model_tool == "keypoint")
 
         # For 'prompt' tools like SAM, we don't need a persistent button,
         # as the interaction is different (click-based, not drawing).
@@ -416,6 +438,9 @@ class MainWindow(QMainWindow):
         elif self.last_selected_tool == "mask" and not self.mask_tool_button.isVisible():
             self.set_active_tool("bbox")
             self.bbox_tool_button.setChecked(True)
+        elif self.last_selected_tool == "keypoint" and not self.keypoint_tool_button.isVisible():
+            self.set_active_tool("bbox")
+            self.bbox_tool_button.setChecked(True)
         else:
             # Re-apply the last used tool
             if self.last_selected_tool == "bbox":
@@ -424,6 +449,8 @@ class MainWindow(QMainWindow):
                 self.polygon_tool_button.setChecked(True)
             elif self.last_selected_tool == "mask":
                 self.mask_tool_button.setChecked(True)
+            elif self.last_selected_tool == "keypoint":
+                self.keypoint_tool_button.setChecked(True)
             self.set_active_tool(self.last_selected_tool)
 
 
@@ -677,6 +704,12 @@ class MainWindow(QMainWindow):
         active_viewer = self.tabs.currentWidget()
         if isinstance(active_viewer, ImageViewer):
             self.annotation_panel.update_annotations(active_viewer.annotations)
+
+    def on_keypoint_display_options_changed(self, options):
+        """Passes the keypoint display options to the current image viewer."""
+        active_viewer = self.tabs.currentWidget()
+        if isinstance(active_viewer, ImageViewer):
+            active_viewer.set_keypoint_display_options(options)
 
     def save_project_state(self):
         if not self.project_manager.is_project_active(): return

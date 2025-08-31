@@ -1,0 +1,6 @@
+{
+    "annotation_goal": "Keypoints",
+    "model": "OpenPose",
+    "open_files": [],
+    "class_labels": []
+}
