@@ -1,0 +1,100 @@
+# ============================
+# Python + ML Project Gitignore
+# ============================
+
+# Virtual environments
+.venv/
+.venv2/
+env/
+venv/
+myenv/
+
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# IDE / Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Build / packaging
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+sdist/
+wheels/
+pip-wheel-metadata/
+.installed.cfg
+
+# Model files (large binaries)
+models/
+checkpoints/
+*.pth
+*.pt
+*.h5
+*.ckpt
+*.onnx
+*.tflite
+
+# Datasets / large data
+data/
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.npz
+*.npy
+*.pickle
+*.joblib
+
+# PyQt / UI generated files
+*.ui~
+*.qrc~
+*.qmlc
+*.jsc
+
+# Images / Videos (if used for training, better to store externally)
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.gif
+
+# Profiling
+.prof
+*.cprof
+*.dat
+*.out
+
+# Environment configs
+.env
+*.bak
+*.tmp
+models/
+*.pth
+
+# ============================
+# End of Gitignore
+# ============================

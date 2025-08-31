@@ -1,0 +1,10 @@
+# pack-refs with: peeled fully-peeled sorted 
+1b8134cd009d723fff3a5c8a6ab4f4a20a93a242 refs/heads/fix-project-setup
+15553b5382264b70740dab9dc2e5c82aa90bc543 refs/heads/main
+092ef6b23bc50e6f3945f91f71be7af686a42e7c refs/pull/1/head
+0f61856b6ad4275d603fe38c27fc83a8fba18a72 refs/pull/2/head
+46306d2bbf73aa921b7917a35a62fcf8245dc530 refs/pull/3/head
+c65ef9b8c608dac9d56de71eb328f2294e5741bb refs/pull/4/head
+f30344001dcce90a7d3e65c478e0a257debc37fc refs/pull/5/head
+47130658b57cd4d07aefa9752ca3ceb5d6d8bc0f refs/pull/6/head
+1b8134cd009d723fff3a5c8a6ab4f4a20a93a242 refs/pull/7/head
